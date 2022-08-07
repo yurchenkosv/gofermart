@@ -13,7 +13,7 @@ func RegisterUser(user *model.User, repository *dao.PostgresRepository) (*model.
 		return nil, &err
 	}
 	repository.SetUser(user).Save()
-
+	savedUser, _ = repository.GetUser(user)
 	return savedUser, nil
 }
 
