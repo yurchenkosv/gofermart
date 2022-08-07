@@ -4,7 +4,7 @@ import "fmt"
 
 type OrderAlreadyAcceptedCurrentUserError struct {
 	OrderNumber int
-	User        string
+	UserID      int
 }
 
 type OrderAlreadyAcceptedDifferentUser struct {
@@ -19,7 +19,7 @@ type NoOrdersDataError struct {
 }
 
 func (err *OrderAlreadyAcceptedCurrentUserError) Error() string {
-	return fmt.Sprintf("order with number %d already accepted from user %s", err.OrderNumber, err.User)
+	return fmt.Sprintf("order with number %d already accepted from user %d", err.OrderNumber, err.UserID)
 }
 
 func (err *OrderAlreadyAcceptedDifferentUser) Error() string {

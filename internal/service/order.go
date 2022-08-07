@@ -9,11 +9,11 @@ import (
 func CreateOrder(order *model.Order, repository *dao.PostgresRepository) error {
 	checkOrder, _ := repository.GetOrderByNumber(order.Number)
 	if checkOrder.ID != nil {
-		checkID := *checkOrder.User.ID
-		orderID := *order.User.ID
-		if checkID == orderID {
+		checkUserID := *checkOrder.User.ID
+		orderUserID := *order.User.ID
+		if checkUserID == orderUserID {
 			return &errors.OrderAlreadyAcceptedCurrentUserError{
-				User:        order.User.Login,
+				UserID:      checkUserID,
 				OrderNumber: order.Number,
 			}
 		} else {
