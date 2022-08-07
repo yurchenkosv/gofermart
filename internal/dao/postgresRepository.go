@@ -44,8 +44,8 @@ func (repo *PostgresRepository) GetBalance(balance model.Balance) (*model.Balanc
 	return b, err
 }
 
-func (repo *PostgresRepository) SetOrder(order model.Order) *PostgresRepository {
-	repo.order = &order
+func (repo *PostgresRepository) SetOrder(order *model.Order) *PostgresRepository {
+	repo.order = order
 	return repo
 }
 

@@ -28,7 +28,7 @@ func CreateOrder(order *model.Order, repository *dao.PostgresRepository) error {
 			OrderNumber: order.Number,
 		}
 	}
-	repository.SetOrder(*order).Save()
+	repository.SetOrder(order).Save()
 	return nil
 }
 
