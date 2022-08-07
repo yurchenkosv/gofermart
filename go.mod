@@ -5,6 +5,7 @@ go 1.18
 require (
 	github.com/caarlos0/env/v6 v6.9.3
 	github.com/go-chi/chi/v5 v5.0.7
+	github.com/go-chi/jwtauth/v5 v5.0.2
 	github.com/golang-migrate/migrate/v4 v4.15.2
 	github.com/jackc/pgx/v4 v4.16.1
 	github.com/sirupsen/logrus v1.9.0
@@ -12,7 +13,6 @@ require (
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.0-20210816181553-5444fa50b93d // indirect
-	github.com/go-chi/jwtauth/v5 v5.0.2 // indirect
 	github.com/goccy/go-json v0.7.6 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
