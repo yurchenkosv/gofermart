@@ -50,7 +50,7 @@ func (repo *PostgresRepository) SetOrder(order model.Order) *PostgresRepository 
 }
 
 func (repo *PostgresRepository) GetOrders(order model.Order) ([]model.Order, error) {
-	userID := order.User.Id
+	userID := order.User.ID
 	orders := getOrdersByUserID(*userID, repo.Conn)
 	return orders, nil
 }
@@ -103,7 +103,7 @@ func getWithdrawalsForCurrentUser(w model.Withdraw, conn string) ([]model.Withdr
 		    JOIN orders o ON o.id = withdrawals.order_id 
 		    JOIN users u ON u.id = o.user_id WHERE user_id=$1;
 	`
-	result, err := connect.Query(context.Background(), query, w.User.Id)
+	result, err := connect.Query(context.Background(), query, w.User.ID)
 	for result.Next() {
 		order := model.Order{}
 		withdraw := model.Withdraw{}
@@ -135,7 +135,7 @@ func saveBalance(balance *model.Balance, conn string) error {
 		ON CONFLICT DO UPDATE SET balance=$2; 
 	`
 	_, err = connect.Exec(context.Background(), query,
-		balance.User.Id,
+		balance.User.ID,
 		balance.Balance,
 		balance.SpentAllTime,
 	)
@@ -154,7 +154,7 @@ func getCurrentUserBalance(b model.Balance, conn string) (*model.Balance, error)
 		FROM balance
 		WHERE user_id=$1
 	`
-	result, err := connect.Query(context.Background(), query, balance.User.Id)
+	result, err := connect.Query(context.Background(), query, balance.User.ID)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -214,7 +214,7 @@ func saveOrder(order *model.Order, conn string) error {
 		VALUES ($1, $2, $3, $4, $5); 
 	`
 	_, err = connect.Exec(context.Background(), query,
-		order.User.Id,
+		order.User.ID,
 		order.Number,
 		order.Status,
 		order.UploadTime,
@@ -263,7 +263,7 @@ func getUser(user *model.User, conn string) (*model.User, error) {
 
 	result.Next()
 	result.Scan(&userID)
-	user.Id = userID
+	user.ID = userID
 
 	return user, nil
 }
@@ -286,7 +286,7 @@ func getOrderByNumber(orderNum int, conn string) (*model.Order, error) {
 	defer result.Close()
 
 	result.Next()
-	result.Scan(&order.Id)
+	result.Scan(&order.ID)
 
 	return &order, nil
 }

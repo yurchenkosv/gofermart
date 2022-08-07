@@ -8,7 +8,7 @@ import (
 
 func RegisterUser(user *model.User, repository *dao.PostgresRepository) (*model.User, error) {
 	savedUser, _ := repository.GetUser(user)
-	if savedUser.Id != nil {
+	if savedUser.ID != nil {
 		err := errors.UserAlreadyExistsError{User: user.Login}
 		return nil, &err
 	}
@@ -19,7 +19,7 @@ func RegisterUser(user *model.User, repository *dao.PostgresRepository) (*model.
 
 func AuthenticateUser(user *model.User, repository *dao.PostgresRepository) (*model.User, error) {
 	user, _ = repository.GetUser(user)
-	if user.Id == nil {
+	if user.ID == nil {
 		err := errors.InvalidUserError{}
 		return nil, &err
 	}

@@ -3,7 +3,7 @@ package model
 import "time"
 
 type Order struct {
-	Id         *int      `json:"-"`
+	ID         *int      `json:"-"`
 	User       *User     `json:"-"`
 	Number     int       `json:"number"`
 	Accrual    *int      `json:"accrual,omitempty"`

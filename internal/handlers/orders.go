@@ -28,7 +28,7 @@ func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
 
 	userID := GetUserIDFromToken(request.Context())
 	order.Status = model.OrderStatusNew
-	order.User = &model.User{Id: &userID}
+	order.User = &model.User{ID: &userID}
 	order.UploadTime = now
 
 	err = service.CreateOrder(&order, repo)
@@ -57,7 +57,7 @@ func HandleGetOrders(writer http.ResponseWriter, request *http.Request) {
 	repo := cfg.Repo
 	order := model.Order{
 		User: &model.User{
-			Id: &userID,
+			ID: &userID,
 		},
 	}
 	orders, err := service.GetUploadedOrdersForUser(&order, repo)

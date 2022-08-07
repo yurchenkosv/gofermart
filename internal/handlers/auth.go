@@ -14,6 +14,8 @@ func HandleUserRegistration(writer http.ResponseWriter, request *http.Request) {
 	var user model.User
 
 	body, err := io.ReadAll(request.Body)
+	defer request.Body.Close()
+
 	CheckErrors(err, writer)
 	err = json.Unmarshal(body, &user)
 	CheckErrors(err, writer)
@@ -39,6 +41,7 @@ func HandleUserLogin(writer http.ResponseWriter, request *http.Request) {
 	var user model.User
 
 	body, err := io.ReadAll(request.Body)
+	defer request.Body.Close()
 	CheckErrors(err, writer)
 
 	err = json.Unmarshal(body, &user)
@@ -50,6 +53,7 @@ func HandleUserLogin(writer http.ResponseWriter, request *http.Request) {
 	updatedUser, err := service.AuthenticateUser(&user, repo)
 	if err != nil {
 		switch e := err.(type) {
+
 		case *errors.InvalidUserError:
 			log.Error(err)
 			writer.WriteHeader(http.StatusUnauthorized)

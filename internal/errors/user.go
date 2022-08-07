@@ -13,5 +13,5 @@ func (err *UserAlreadyExistsError) Error() string {
 type InvalidUserError struct{}
 
 func (err *InvalidUserError) Error() string {
-	return fmt.Sprint("invalid username or password")
+	return "invalid username or password"
 }

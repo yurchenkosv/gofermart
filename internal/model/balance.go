@@ -1,7 +1,7 @@
 package model
 
 type Balance struct {
-	Id           int
+	ID           int
 	User         User
 	Balance      float64 `json:"current"`
 	SpentAllTime float64 `json:"withdrawn"`

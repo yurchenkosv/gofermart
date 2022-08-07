@@ -24,7 +24,7 @@ func GetConfigFromContext(ctx context.Context) config.ServerConfig {
 
 func SetToken(writer http.ResponseWriter, request *http.Request, user model.User) *http.ResponseWriter {
 	claims := map[string]interface{}{
-		"user_id": user.Id,
+		"user_id": user.ID,
 	}
 	cfg := GetConfigFromContext(request.Context())
 	tokenAuth := cfg.TokenAuth
@@ -35,7 +35,7 @@ func SetToken(writer http.ResponseWriter, request *http.Request, user model.User
 	_, token, _ := tokenAuth.Encode(claims)
 
 	writer.Header().Add("jwt", token)
-
+	writer.Header().Add("Set-Cookie", "jwt="+token)
 	return &writer
 }
 

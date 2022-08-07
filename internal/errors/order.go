@@ -31,5 +31,5 @@ func (err *OrderFormatError) Error() string {
 }
 
 func (err *NoOrdersDataError) Error() string {
-	return fmt.Sprint("no orders was made for current user")
+	return "no orders was made for current user"
 }

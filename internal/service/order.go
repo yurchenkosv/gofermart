@@ -8,8 +8,8 @@ import (
 
 func CreateOrder(order *model.Order, repository *dao.PostgresRepository) error {
 	checkOrder, _ := repository.GetOrderByNumber(order.Number)
-	if checkOrder.Id != nil {
-		if checkOrder.User.Id == order.User.Id {
+	if checkOrder.ID != nil {
+		if checkOrder.User.ID == order.User.ID {
 			return &errors.OrderAlreadyAcceptedCurrentUserError{
 				User:        order.User.Login,
 				OrderNumber: order.Number,
