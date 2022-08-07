@@ -67,5 +67,6 @@ func HandleGetOrders(writer http.ResponseWriter, request *http.Request) {
 		CheckErrors(e, writer)
 	}
 	result, _ := json.Marshal(orders)
+	writer.Header().Add("Content-Type", "application/json")
 	writer.Write(result)
 }
