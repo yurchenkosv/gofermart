@@ -270,13 +270,15 @@ func getUser(user *model.User, conn string) (*model.User, error) {
 
 func getOrderByNumber(orderNum int, conn string) (*model.Order, error) {
 	var order = model.Order{Number: orderNum}
+	var user = model.User{}
+	var userID *int
 	connect, err := pgx.Connect(context.Background(), conn)
 	if err != nil {
 		log.Errorf("Unable to connect to database: %v\n", err)
 	}
 	defer connect.Close(context.Background())
 	query := `
-		SELECT id FROM orders WHERE number=$1
+		SELECT id, user_id FROM orders WHERE number=$1
 	`
 	result, err := connect.Query(context.Background(), query, orderNum)
 	if err != nil {
@@ -286,7 +288,8 @@ func getOrderByNumber(orderNum int, conn string) (*model.Order, error) {
 	defer result.Close()
 
 	result.Next()
-	result.Scan(&order.ID)
-
+	result.Scan(&order.ID, &userID)
+	user.ID = userID
+	order.User = &user
 	return &order, nil
 }
