@@ -13,11 +13,10 @@ import (
 func HandleUserRegistration(writer http.ResponseWriter, request *http.Request) {
 	var user model.User
 
-	body, err := io.ReadAll(request.Body)
-	defer request.Body.Close()
+	data, err := io.ReadAll(request.Body)
 
 	CheckErrors(err, writer)
-	err = json.Unmarshal(body, &user)
+	err = json.Unmarshal(data, &user)
 	CheckErrors(err, writer)
 	cfg := GetConfigFromContext(request.Context())
 	repo := cfg.Repo
@@ -40,11 +39,10 @@ func HandleUserRegistration(writer http.ResponseWriter, request *http.Request) {
 func HandleUserLogin(writer http.ResponseWriter, request *http.Request) {
 	var user model.User
 
-	body, err := io.ReadAll(request.Body)
-	defer request.Body.Close()
+	data, err := io.ReadAll(request.Body)
 	CheckErrors(err, writer)
 
-	err = json.Unmarshal(body, &user)
+	err = json.Unmarshal(data, &user)
 	CheckErrors(err, writer)
 
 	cfg := GetConfigFromContext(request.Context())

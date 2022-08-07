@@ -24,7 +24,7 @@ func GetConfigFromContext(ctx context.Context) config.ServerConfig {
 
 func SetToken(writer http.ResponseWriter, request *http.Request, user model.User) *http.ResponseWriter {
 	claims := map[string]interface{}{
-		"user_id": user.ID,
+		"user_id": *user.ID,
 	}
 	cfg := GetConfigFromContext(request.Context())
 	tokenAuth := cfg.TokenAuth
@@ -40,7 +40,10 @@ func SetToken(writer http.ResponseWriter, request *http.Request, user model.User
 }
 
 func GetUserIDFromToken(ctx context.Context) int {
-	_, claims, _ := jwtauth.FromContext(ctx)
-	userID := claims["user_id"].(float64)
-	return int(userID)
+	_, claims, err := jwtauth.FromContext(ctx)
+	if err != nil {
+		log.Error(err)
+	}
+	userID := claims["user_id"].(int)
+	return userID
 }
