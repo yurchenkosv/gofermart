@@ -44,6 +44,6 @@ func GetUserIDFromToken(ctx context.Context) int {
 	if err != nil {
 		log.Error(err)
 	}
-	userID := claims["user_id"].(int)
-	return userID
+	userID := claims["user_id"].(float64)
+	return int(userID)
 }

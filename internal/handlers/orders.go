@@ -62,8 +62,11 @@ func HandleGetOrders(writer http.ResponseWriter, request *http.Request) {
 	}
 	orders, err := service.GetUploadedOrdersForUser(&order, repo)
 	switch e := err.(type) {
+	case *errors.NoOrdersDataError:
+		log.Error(err)
+		writer.WriteHeader(http.StatusNoContent)
 	default:
-		log.Error("error getting order", e)
+		log.Error("error getting order ", e)
 		CheckErrors(e, writer)
 	}
 	result, _ := json.Marshal(orders)
