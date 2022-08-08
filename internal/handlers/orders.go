@@ -62,6 +62,7 @@ func HandleGetOrders(writer http.ResponseWriter, request *http.Request) {
 			ID: &userID,
 		},
 	}
+	log.Infof("getting all orders with user %d", userID)
 	orders, err := service.GetUploadedOrdersForUser(&order, repo)
 	if err != nil {
 		switch err.(type) {
