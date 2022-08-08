@@ -31,6 +31,8 @@ func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
 	order.User = &model.User{ID: &userID}
 	order.UploadTime = now
 
+	log.Infof("creating order with number %s, by user %d", orderNum, userID)
+
 	err = service.CreateOrder(&order, repo)
 	if err != nil {
 		switch e := err.(type) {

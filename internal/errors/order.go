@@ -9,6 +9,7 @@ type OrderAlreadyAcceptedCurrentUserError struct {
 
 type OrderAlreadyAcceptedDifferentUser struct {
 	OrderNumber int
+	UserID      int
 }
 
 type OrderFormatError struct {
@@ -23,7 +24,7 @@ func (err *OrderAlreadyAcceptedCurrentUserError) Error() string {
 }
 
 func (err *OrderAlreadyAcceptedDifferentUser) Error() string {
-	return fmt.Sprintf("order with number %d already accepted from different user", err.OrderNumber)
+	return fmt.Sprintf("order with number %d already accepted from different user %d", err.OrderNumber, err.UserID)
 }
 
 func (err *OrderFormatError) Error() string {
