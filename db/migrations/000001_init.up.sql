@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS orders(
 
 CREATE TABLE IF NOT EXISTS withdrawals(
     id BIGSERIAL PRIMARY KEY,
-    order_num BIGINT,
+    order_num VARCHAR(64),
     sum FLOAT,
     user_id BIGINT,
     processed_at TIMESTAMP WITH TIME ZONE
