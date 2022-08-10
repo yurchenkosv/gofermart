@@ -3,8 +3,8 @@ package model
 import "time"
 
 type Withdraw struct {
-	Order       Order
-	Sum         int
-	ProcessedAt time.Time
-	User        User
+	Order       string    `json:"order"`
+	Sum         int       `json:"sum"`
+	ProcessedAt time.Time `json:"processed_at,omitempty"`
+	User        User      `json:"-"`
 }

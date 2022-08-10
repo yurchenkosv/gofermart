@@ -24,9 +24,8 @@ func NewPGRepo(dbURI string) *PostgresRepository {
 	return &PostgresRepository{Conn: dbURI}
 }
 
-func (repo *PostgresRepository) GetWithdrawals(withdraw model.Withdraw) []model.Withdraw {
-	withdwals, _ := getWithdrawalsForCurrentUser(withdraw, repo.Conn)
-	return withdwals
+func (repo *PostgresRepository) GetWithdrawals(withdraw model.Withdraw) ([]*model.Withdraw, error) {
+	return getWithdrawalsForCurrentUser(withdraw, repo.Conn)
 }
 
 func (repo *PostgresRepository) SetWithdraw(withdraw *model.Withdraw) *PostgresRepository {
@@ -55,7 +54,7 @@ func (repo *PostgresRepository) GetOrders(order model.Order) ([]model.Order, err
 	return orders, nil
 }
 
-func (repo *PostgresRepository) GetOrderByNumber(orderNumber int) (*model.Order, error) {
+func (repo *PostgresRepository) GetOrderByNumber(orderNumber string) (*model.Order, error) {
 	return getOrderByNumber(orderNumber, repo.Conn)
 }
 
@@ -82,13 +81,43 @@ func (repo *PostgresRepository) Save() {
 		repo.balance = nil
 	}
 	if repo.withdraw != nil {
+		saveWithdraw(repo.withdraw, repo.Conn)
 		repo.withdraw = nil
 	}
 
 }
 
-func getWithdrawalsForCurrentUser(w model.Withdraw, conn string) ([]model.Withdraw, error) {
-	var withrawals []model.Withdraw
+func saveWithdraw(withdraw *model.Withdraw, conn string) error {
+	connect, err := pgx.Connect(context.Background(), conn)
+	if err != nil {
+		log.Errorf("Unable to connect to database: %v\n", err)
+		return err
+	}
+	defer connect.Close(context.Background())
+	query := `
+		INSERT INTO withdrawals(
+		                        order_num, 
+		                        sum, 
+		                        processed_at,
+		                        user_id
+		                   )
+		VALUES ($1, $2, $3, $4)
+	`
+	_, err = connect.Exec(context.Background(), query,
+		withdraw.Order,
+		withdraw.Sum,
+		withdraw.ProcessedAt,
+		withdraw.User.ID,
+	)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	return nil
+}
+
+func getWithdrawalsForCurrentUser(w model.Withdraw, conn string) ([]*model.Withdraw, error) {
+	var withrawals []*model.Withdraw
 	connect, err := pgx.Connect(context.Background(), conn)
 	if err != nil {
 		log.Errorf("Unable to connect to database: %v\n", err)
@@ -96,24 +125,21 @@ func getWithdrawalsForCurrentUser(w model.Withdraw, conn string) ([]model.Withdr
 	}
 	defer connect.Close(context.Background())
 	query := `
-		SELECT o.number, 
+		SELECT order_num, 
 		       sum, 
 		       processed_at 
 		FROM withdrawals 
-		    JOIN orders o ON o.id = withdrawals.order_id 
-		    JOIN users u ON u.id = o.user_id WHERE user_id=$1;
+		WHERE user_id=$1;
 	`
 	result, err := connect.Query(context.Background(), query, w.User.ID)
 	for result.Next() {
-		order := model.Order{}
 		withdraw := model.Withdraw{}
 		result.Scan(
-			&order.Number,
+			&withdraw.Order,
 			&withdraw.Sum,
 			&withdraw.ProcessedAt,
 		)
-		withdraw.Order = order
-		withrawals = append(withrawals, withdraw)
+		withrawals = append(withrawals, &withdraw)
 	}
 	return withrawals, nil
 }
@@ -132,13 +158,19 @@ func saveBalance(balance *model.Balance, conn string) error {
 		                   spent_all_time
 		                   )
 		VALUES ($1, $2, $3)
-		ON CONFLICT DO UPDATE SET balance=$2; 
+		ON CONFLICT (user_id) DO UPDATE
+		    SET balance=$2, 
+		        spent_all_time=$3 
 	`
 	_, err = connect.Exec(context.Background(), query,
 		balance.User.ID,
 		balance.Balance,
 		balance.SpentAllTime,
 	)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 	return nil
 }
 
@@ -162,7 +194,7 @@ func getCurrentUserBalance(b model.Balance, conn string) (*model.Balance, error)
 	defer result.Close()
 
 	result.Next()
-	result.Scan(balance.Balance, balance.SpentAllTime)
+	result.Scan(&balance.Balance, &balance.SpentAllTime)
 	return balance, nil
 }
 
@@ -268,7 +300,7 @@ func getUser(user *model.User, conn string) (*model.User, error) {
 	return user, nil
 }
 
-func getOrderByNumber(orderNum int, conn string) (*model.Order, error) {
+func getOrderByNumber(orderNum string, conn string) (*model.Order, error) {
 	var order = model.Order{Number: orderNum}
 	var user = model.User{}
 	var userID *int

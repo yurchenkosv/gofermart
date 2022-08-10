@@ -1,9 +1,11 @@
 package service
 
 import (
+	log "github.com/sirupsen/logrus"
 	"github.com/yurchenkosv/gofermart/internal/dao"
 	"github.com/yurchenkosv/gofermart/internal/errors"
 	"github.com/yurchenkosv/gofermart/internal/model"
+	"strconv"
 )
 
 func CreateOrder(order *model.Order, repository *dao.PostgresRepository) error {
@@ -20,14 +22,15 @@ func CreateOrder(order *model.Order, repository *dao.PostgresRepository) error {
 				OrderNumber: order.Number,
 			}
 		} else {
-			return &errors.OrderAlreadyAcceptedDifferentUser{
+			return &errors.OrderAlreadyAcceptedDifferentUserError{
 				OrderNumber: order.Number,
 				UserID:      checkUserID,
 			}
 		}
 
 	}
-	if !checkOrderFormat(order.Number) {
+	orderNum, _ := strconv.Atoi(order.Number)
+	if !checkOrderFormat(orderNum) {
 		return &errors.OrderFormatError{
 			OrderNumber: order.Number,
 		}
@@ -38,11 +41,12 @@ func CreateOrder(order *model.Order, repository *dao.PostgresRepository) error {
 
 func GetUploadedOrdersForUser(order *model.Order, repository *dao.PostgresRepository) ([]model.Order, error) {
 	orders, err := repository.GetOrders(*order)
+	log.Infof("found orders for current user: ", orders)
 	if err != nil {
 		return nil, err
 	}
 	if len(orders) == 0 {
-		return nil, &errors.NoOrdersDataError{}
+		return nil, &errors.NoOrdersError{}
 	}
 	return orders, nil
 }

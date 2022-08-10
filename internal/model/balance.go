@@ -1,8 +1,8 @@
 package model
 
 type Balance struct {
-	ID           int
-	User         User
-	Balance      float64 `json:"current"`
-	SpentAllTime float64 `json:"withdrawn"`
+	ID           int  `json:"-"`
+	User         User `json:"-"`
+	Balance      int  `json:"current"`
+	SpentAllTime int  `json:"withdrawn"`
 }

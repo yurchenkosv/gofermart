@@ -8,7 +8,6 @@ import (
 	"github.com/yurchenkosv/gofermart/internal/service"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -23,8 +22,7 @@ func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
 	CheckErrors(err, writer)
 
 	orderNum := strings.TrimSpace(string(body))
-	order.Number, err = strconv.Atoi(orderNum)
-	CheckErrors(err, writer)
+	order.Number = orderNum
 
 	userID := GetUserIDFromToken(request.Context())
 	order.Status = model.OrderStatusNew
@@ -35,8 +33,8 @@ func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
 
 	err = service.CreateOrder(&order, repo)
 	if err != nil {
-		switch e := err.(type) {
-		case *errors.OrderAlreadyAcceptedDifferentUser:
+		switch err.(type) {
+		case *errors.OrderAlreadyAcceptedDifferentUserError:
 			log.Error(err)
 			writer.WriteHeader(http.StatusConflict)
 		case *errors.OrderAlreadyAcceptedCurrentUserError:
@@ -46,8 +44,8 @@ func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
 			log.Error(err)
 			writer.WriteHeader(http.StatusUnprocessableEntity)
 		default:
-			log.Error("error creating order", e)
-			CheckErrors(e, writer)
+			log.Error("error creating order", err)
+			CheckErrors(err, writer)
 		}
 	}
 	writer.WriteHeader(http.StatusAccepted)
@@ -66,7 +64,7 @@ func HandleGetOrders(writer http.ResponseWriter, request *http.Request) {
 	orders, err := service.GetUploadedOrdersForUser(&order, repo)
 	if err != nil {
 		switch err.(type) {
-		case *errors.NoOrdersDataError:
+		case *errors.NoOrdersError:
 			log.Error(err)
 			writer.WriteHeader(http.StatusNoContent)
 		default:

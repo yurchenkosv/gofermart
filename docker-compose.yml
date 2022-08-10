@@ -1,0 +1,19 @@
+version: "3.9"
+services:
+  gofermart:
+    image: "gofermart:latest"
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URI: "postgres://postgres:postgres@postgres:5432/gofermart?sslmode=disable"
+      RUN_ADDRESS: "0.0.0.0:8080"
+    depends_on:
+      - "postgres"
+    command: ["dockerize", "--wait", "tcp://postgres:5432", "./gofermart"]
+  postgres:
+    image: "postgres:12"
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_DB: "gofermart"
