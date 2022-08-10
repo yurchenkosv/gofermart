@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS balance(
 CREATE TABLE IF NOT EXISTS orders(
     id  SERIAL PRIMARY KEY,
     user_id BIGINT,
-    number BIGINT UNIQUE,
+    number VARCHAR(64) UNIQUE,
     upload_time TIMESTAMP WITH TIME ZONE,
     accrual BIGINT,
     status VARCHAR(64)
