@@ -14,7 +14,7 @@ import (
 	"strconv"
 )
 
-func UpdateOrderStatusFromAccrualSys(order int, config config.ServerConfig) {
+func UpdateOrderStatusFromAccrualSys(order int, config *config.ServerConfig) {
 	var (
 		accrualStatus = dto.AccrualStatus{}
 		orderToUpdate = model.Order{}
@@ -61,7 +61,7 @@ func GetOrdersForStatusCheck(repository *dao.PostgresRepository) []*model.Order 
 	return orders
 }
 
-func StatusCheckLoop(serverConfig config.ServerConfig) {
+func StatusCheckLoop(serverConfig *config.ServerConfig) {
 	orders := GetOrdersForStatusCheck(serverConfig.Repo)
 	for i := range orders {
 		orderNum, err := strconv.Atoi(orders[i].Number)

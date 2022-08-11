@@ -1,8 +1,8 @@
 package dao
 
 import (
-	"context"
-	"github.com/jackc/pgx/v5"
+	_ "github.com/jackc/pgx/v4"
+	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
 	"github.com/yurchenkosv/gofermart/internal/model"
 )
@@ -16,11 +16,11 @@ type PostgresRepository struct {
 }
 
 func NewPGRepo(dbURI string) *PostgresRepository {
-	conn, err := pgx.Connect(context.Background(), dbURI)
+	conn, err := sqlx.Connect("postgres", dbURI)
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	defer conn.Close(context.Background())
+	defer conn.Close()
 	return &PostgresRepository{Conn: dbURI}
 }
 
@@ -92,13 +92,12 @@ func (repo *PostgresRepository) Save() {
 
 }
 
-func saveWithdraw(withdraw *model.Withdraw, conn string) error {
-	connect, err := pgx.Connect(context.Background(), conn)
+func saveWithdraw(withdraw *model.Withdraw, connect string) error {
+	conn, err := sqlx.Connect("postgres", connect)
 	if err != nil {
-		log.Errorf("Unable to connect to database: %v\n", err)
-		return err
+		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	defer connect.Close(context.Background())
+	defer conn.Close()
 	query := `
 		INSERT INTO withdrawals(
 		                        order_num, 
@@ -108,7 +107,7 @@ func saveWithdraw(withdraw *model.Withdraw, conn string) error {
 		                   )
 		VALUES ($1, $2, $3, $4);
 	`
-	_, err = connect.Exec(context.Background(), query,
+	_, err = conn.Exec(query,
 		withdraw.Order,
 		withdraw.Sum,
 		withdraw.ProcessedAt,
@@ -121,14 +120,13 @@ func saveWithdraw(withdraw *model.Withdraw, conn string) error {
 	return nil
 }
 
-func getWithdrawalsForCurrentUser(w model.Withdraw, conn string) ([]*model.Withdraw, error) {
+func getWithdrawalsForCurrentUser(w model.Withdraw, connect string) ([]*model.Withdraw, error) {
 	var withrawals []*model.Withdraw
-	connect, err := pgx.Connect(context.Background(), conn)
+	conn, err := sqlx.Connect("postgres", connect)
 	if err != nil {
-		log.Errorf("Unable to connect to database: %v\n", err)
-		return nil, err
+		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	defer connect.Close(context.Background())
+	defer conn.Close()
 	query := `
 		SELECT order_num, 
 		       sum, 
@@ -136,26 +134,33 @@ func getWithdrawalsForCurrentUser(w model.Withdraw, conn string) ([]*model.Withd
 		FROM withdrawals 
 		WHERE user_id=$1;
 	`
-	result, err := connect.Query(context.Background(), query, w.User.ID)
-	for result.Next() {
+	rows, err := conn.Queryx(query, w.User.ID)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	for rows.Next() {
 		withdraw := model.Withdraw{}
-		result.Scan(
+		err := rows.Scan(
 			&withdraw.Order,
 			&withdraw.Sum,
 			&withdraw.ProcessedAt,
 		)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
 		withrawals = append(withrawals, &withdraw)
 	}
 	return withrawals, nil
 }
 
-func saveBalance(balance *model.Balance, conn string) error {
-	connect, err := pgx.Connect(context.Background(), conn)
+func saveBalance(balance *model.Balance, connect string) error {
+	conn, err := sqlx.Connect("postgres", connect)
 	if err != nil {
-		log.Errorf("Unable to connect to database: %v\n", err)
-		return err
+		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	defer connect.Close(context.Background())
+	defer conn.Close()
 	query := `
 		INSERT INTO balance(
 		                   user_id, 
@@ -167,7 +172,7 @@ func saveBalance(balance *model.Balance, conn string) error {
 		    SET balance=$2, 
 		        spent_all_time=$3 ;
 	`
-	_, err = connect.Exec(context.Background(), query,
+	_, err = conn.Exec(query,
 		balance.User.ID,
 		balance.Balance,
 		balance.SpentAllTime,
@@ -179,19 +184,19 @@ func saveBalance(balance *model.Balance, conn string) error {
 	return nil
 }
 
-func getCurrentUserBalance(b model.Balance, conn string) (*model.Balance, error) {
+func getCurrentUserBalance(b model.Balance, connect string) (*model.Balance, error) {
 	var balance = &b
-	connect, err := pgx.Connect(context.Background(), conn)
+	conn, err := sqlx.Connect("postgres", connect)
 	if err != nil {
-		log.Errorf("Unable to connect to database: %v\n", err)
+		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	defer connect.Close(context.Background())
+	defer conn.Close()
 	query := `
 		SELECT balance, spent_all_time
 		FROM balance
 		WHERE user_id=$1;
 	`
-	result, err := connect.Query(context.Background(), query, balance.User.ID)
+	result, err := conn.Query(query, balance.User.ID)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -203,21 +208,19 @@ func getCurrentUserBalance(b model.Balance, conn string) (*model.Balance, error)
 	return balance, nil
 }
 
-func getOrdersByUserID(userID int, conn string) []model.Order {
+func getOrdersByUserID(userID int, connect string) []model.Order {
 	var orders []model.Order
-	var accrual float64
-	connect, err := pgx.Connect(context.Background(), conn)
-
+	conn, err := sqlx.Connect("postgres", connect)
 	if err != nil {
-		log.Errorf("Unable to connect to database: %v\n", err)
+		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	defer connect.Close(context.Background())
+	defer conn.Close()
 	query := `
 		SELECT id, number, upload_time, accrual, status
 		FROM orders
 		WHERE user_id=$1;
 	`
-	result, err := connect.Query(context.Background(), query, userID)
+	result, err := conn.Query(query, userID)
 	if err != nil {
 		log.Error(err)
 		return nil
@@ -230,7 +233,7 @@ func getOrdersByUserID(userID int, conn string) []model.Order {
 			&order.ID,
 			&order.Number,
 			&order.UploadTime,
-			accrual,
+			&order.Accrual,
 			&order.Status)
 		orders = append(orders, order)
 		if err != nil {
@@ -241,20 +244,20 @@ func getOrdersByUserID(userID int, conn string) []model.Order {
 	return orders
 }
 
-func getOrdersForUpdate(conn string) []*model.Order {
+func getOrdersForUpdate(connect string) []*model.Order {
 	var orders []*model.Order
-	connect, err := pgx.Connect(context.Background(), conn)
+	conn, err := sqlx.Connect("postgres", connect)
 	if err != nil {
-		log.Errorf("Unable to connect to database: %v\n", err)
+		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	defer connect.Close(context.Background())
+	defer conn.Close()
 	query := `
 		SELECT id, number, upload_time, accrual, status
 		FROM orders
 		WHERE status in ('NEW',
 		                'PROCESSING');
 	`
-	result, err := connect.Query(context.Background(), query)
+	result, err := conn.Query(query)
 	if err != nil {
 		log.Error(err)
 		return nil
@@ -274,12 +277,12 @@ func getOrdersForUpdate(conn string) []*model.Order {
 	return orders
 }
 
-func saveOrder(order *model.Order, conn string) error {
-	connect, err := pgx.Connect(context.Background(), conn)
+func saveOrder(order *model.Order, connect string) error {
+	conn, err := sqlx.Connect("postgres", connect)
 	if err != nil {
-		log.Errorf("Unable to connect to database: %v\n", err)
+		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	defer connect.Close(context.Background())
+	defer conn.Close()
 	query := `
 		INSERT INTO orders(
 		                   user_id, 
@@ -295,30 +298,13 @@ func saveOrder(order *model.Order, conn string) error {
 		            	upload_time=$4,
 		            	accrual=$5;
 	`
-	_, err = connect.Exec(context.Background(), query,
+	_, err = conn.Exec(query,
 		order.User.ID,
 		order.Number,
 		order.Status,
 		order.UploadTime,
 		order.Accrual,
 	)
-	return nil
-}
-
-func saveUser(user *model.User, conn string) error {
-	connect, err := pgx.Connect(context.Background(), conn)
-	if err != nil {
-		log.Errorf("Unable to connect to database: %v\n", err)
-	}
-	defer connect.Close(context.Background())
-	query := `
-		INSERT INTO users(
-		username,
-		password
-		)
-		VALUES($1, $2);
-	`
-	_, err = connect.Exec(context.Background(), query, user.Login, user.Password)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -326,17 +312,38 @@ func saveUser(user *model.User, conn string) error {
 	return nil
 }
 
-func getUser(user *model.User, conn string) (*model.User, error) {
-	var userID *int
-	connect, err := pgx.Connect(context.Background(), conn)
+func saveUser(user *model.User, connect string) error {
+	conn, err := sqlx.Connect("postgres", connect)
 	if err != nil {
-		log.Errorf("Unable to connect to database: %v\n", err)
+		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	defer connect.Close(context.Background())
+	defer conn.Close()
+	query := `
+		INSERT INTO users(
+		username,
+		password
+		)
+		VALUES($1, $2);
+	`
+	_, err = conn.Exec(query, user.Login, user.Password)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	return nil
+}
+
+func getUser(user *model.User, connect string) (*model.User, error) {
+	var userID *int
+	conn, err := sqlx.Connect("postgres", connect)
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v\n", err)
+	}
+	defer conn.Close()
 	query := `
 		SELECT id FROM users WHERE username=$1 and password=$2;
 	`
-	result, err := connect.Query(context.Background(), query, user.Login, user.Password)
+	result, err := conn.Query(query, user.Login, user.Password)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -350,17 +357,17 @@ func getUser(user *model.User, conn string) (*model.User, error) {
 	return user, nil
 }
 
-func getOrderByNumber(orderNum string, conn string) (*model.Order, error) {
+func getOrderByNumber(orderNum string, connect string) (*model.Order, error) {
 	var (
 		order  = model.Order{Number: orderNum}
 		user   = model.User{}
 		userID *int
 	)
-	connect, err := pgx.Connect(context.Background(), conn)
+	conn, err := sqlx.Connect("postgres", connect)
 	if err != nil {
-		log.Errorf("Unable to connect to database: %v\n", err)
+		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
-	defer connect.Close(context.Background())
+	defer conn.Close()
 	query := `
 		SELECT
 		    id,
@@ -371,7 +378,7 @@ func getOrderByNumber(orderNum string, conn string) (*model.Order, error) {
 		FROM orders 
 		WHERE number=$1;
 	`
-	err = connect.QueryRow(context.Background(), query, orderNum).
+	err = conn.QueryRow(query, orderNum).
 		Scan(
 			&order.ID,
 			&order.Number,

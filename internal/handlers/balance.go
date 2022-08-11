@@ -17,7 +17,7 @@ func HandleGetBalance(writer http.ResponseWriter, request *http.Request) {
 	repo := cfg.Repo
 
 	b := model.Balance{User: model.User{ID: &userID}}
-	balance, err := service.GetCurrentUserBalance(b, *repo)
+	balance, err := service.GetCurrentUserBalance(b, repo)
 	if err != nil {
 		log.Error("error getting balance", err)
 		CheckErrors(err, writer)

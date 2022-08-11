@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	cfg       = config.ServerConfig{}
+	cfg       = &config.ServerConfig{}
 	tokenAuth *jwtauth.JWTAuth
 )
 
@@ -33,8 +33,8 @@ func main() {
 	cfg.TokenAuth = tokenAuth
 	cfg.Repo = dao.NewPGRepo(cfg.DatabaseURI)
 
-	Migrate(&cfg)
-	router := routers.NewRouter(&cfg)
+	Migrate(cfg)
+	router := routers.NewRouter(cfg)
 
 	server := http.Server{
 		Addr:    cfg.RunAddress,
