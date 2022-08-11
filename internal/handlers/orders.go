@@ -72,7 +72,10 @@ func HandleGetOrders(writer http.ResponseWriter, request *http.Request) {
 			CheckErrors(err, writer)
 		}
 	}
-	result, _ := json.Marshal(orders)
+	result, err := json.Marshal(orders)
+	if err != nil {
+		log.Error(err)
+	}
 	writer.Header().Add("Content-Type", "application/json")
 	writer.Write(result)
 }

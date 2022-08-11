@@ -2,7 +2,7 @@ package dao
 
 import (
 	"context"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v5"
 	log "github.com/sirupsen/logrus"
 	"github.com/yurchenkosv/gofermart/internal/model"
 )
@@ -205,7 +205,9 @@ func getCurrentUserBalance(b model.Balance, conn string) (*model.Balance, error)
 
 func getOrdersByUserID(userID int, conn string) []model.Order {
 	var orders []model.Order
+	var accrual float64
 	connect, err := pgx.Connect(context.Background(), conn)
+
 	if err != nil {
 		log.Errorf("Unable to connect to database: %v\n", err)
 	}
@@ -224,13 +226,17 @@ func getOrdersByUserID(userID int, conn string) []model.Order {
 
 	for result.Next() {
 		order := model.Order{}
-		result.Scan(
+		err = result.Scan(
 			&order.ID,
 			&order.Number,
 			&order.UploadTime,
-			&order.Accrual,
+			accrual,
 			&order.Status)
 		orders = append(orders, order)
+		if err != nil {
+			log.Error(err)
+			return nil
+		}
 	}
 	return orders
 }
