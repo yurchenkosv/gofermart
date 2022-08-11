@@ -23,8 +23,8 @@ func HandleGetBalance(writer http.ResponseWriter, request *http.Request) {
 		CheckErrors(err, writer)
 	}
 	body, _ := json.Marshal(balance)
-	writer.Write(body)
 	writer.Header().Add("Content-Type", "application/json")
+	writer.Write(body)
 }
 
 func HandleBalanceWithdraw(writer http.ResponseWriter, request *http.Request) {
