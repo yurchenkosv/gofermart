@@ -19,6 +19,9 @@ type OrderFormatError struct {
 type NoOrdersError struct {
 }
 
+type OrderNoChangeError struct {
+}
+
 func (err *OrderAlreadyAcceptedCurrentUserError) Error() string {
 	return fmt.Sprintf("order with number %d already accepted from user %d", err.OrderNumber, err.UserID)
 }
@@ -32,5 +35,9 @@ func (err *OrderFormatError) Error() string {
 }
 
 func (err *NoOrdersError) Error() string {
-	return "no orders was made for current user"
+	return "no orders was found"
+}
+
+func (o *OrderNoChangeError) Error() string {
+	return "order no change"
 }

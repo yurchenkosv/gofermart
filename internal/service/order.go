@@ -40,7 +40,7 @@ func CreateOrder(order *model.Order, repository *dao.PostgresRepository) error {
 }
 
 func GetUploadedOrdersForUser(order *model.Order, repository *dao.PostgresRepository) ([]model.Order, error) {
-	orders, err := repository.GetOrders(*order)
+	orders, err := repository.GetOrdersForUser(*order)
 	log.Infof("found orders for current user: ", orders)
 	if err != nil {
 		return nil, err
@@ -49,6 +49,33 @@ func GetUploadedOrdersForUser(order *model.Order, repository *dao.PostgresReposi
 		return nil, &errors.NoOrdersError{}
 	}
 	return orders, nil
+}
+
+func UpdateOrderStatus(order model.Order, repository *dao.PostgresRepository) error {
+	orderInDB, err := repository.GetOrderByNumber(order.Number)
+	if err != nil {
+		return err
+	}
+	if orderInDB.ID == nil {
+		return &errors.NoOrdersError{}
+	}
+	if orderInDB.Status == order.Status {
+		return &errors.OrderNoChangeError{}
+	}
+	orderInDB.Accrual = order.Accrual
+	orderInDB.Status = order.Status
+
+	repository.SetOrder(&order).Save()
+	if order.Accrual != nil {
+		balance, _ := repository.GetBalance(model.Balance{
+			User: model.User{
+				ID: orderInDB.User.ID,
+			},
+		})
+		balance.Balance += *order.Accrual
+		repository.SetBalance(*balance).Save()
+	}
+	return nil
 }
 
 func checkOrderFormat(number int) bool {

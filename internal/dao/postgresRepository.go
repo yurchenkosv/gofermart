@@ -48,9 +48,14 @@ func (repo *PostgresRepository) SetOrder(order *model.Order) *PostgresRepository
 	return repo
 }
 
-func (repo *PostgresRepository) GetOrders(order model.Order) ([]model.Order, error) {
+func (repo *PostgresRepository) GetOrdersForUser(order model.Order) ([]model.Order, error) {
 	userID := order.User.ID
 	orders := getOrdersByUserID(*userID, repo.Conn)
+	return orders, nil
+}
+
+func (repo *PostgresRepository) GetOrdersForStatusUpdate() ([]*model.Order, error) {
+	orders := getOrdersForUpdate(repo.Conn)
 	return orders, nil
 }
 
@@ -206,7 +211,7 @@ func getOrdersByUserID(userID int, conn string) []model.Order {
 	}
 	defer connect.Close(context.Background())
 	query := `
-		SELECT number, upload_time, accrual, status
+		SELECT id, number, upload_time, accrual, status
 		FROM orders
 		WHERE user_id=$1
 	`
@@ -220,11 +225,45 @@ func getOrdersByUserID(userID int, conn string) []model.Order {
 	for result.Next() {
 		order := model.Order{}
 		result.Scan(
+			&order.ID,
 			&order.Number,
 			&order.UploadTime,
 			&order.Accrual,
 			&order.Status)
 		orders = append(orders, order)
+	}
+	return orders
+}
+
+func getOrdersForUpdate(conn string) []*model.Order {
+	var orders []*model.Order
+	connect, err := pgx.Connect(context.Background(), conn)
+	if err != nil {
+		log.Errorf("Unable to connect to database: %v\n", err)
+	}
+	defer connect.Close(context.Background())
+	query := `
+		SELECT id, number, upload_time, accrual, status
+		FROM orders
+		WHERE status in ('NEW',
+		                'PROCESSING')
+	`
+	result, err := connect.Query(context.Background(), query)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	defer result.Close()
+
+	for result.Next() {
+		order := model.Order{}
+		result.Scan(
+			&order.ID,
+			&order.Number,
+			&order.UploadTime,
+			&order.Accrual,
+			&order.Status)
+		orders = append(orders, &order)
 	}
 	return orders
 }
@@ -310,7 +349,15 @@ func getOrderByNumber(orderNum string, conn string) (*model.Order, error) {
 	}
 	defer connect.Close(context.Background())
 	query := `
-		SELECT id, user_id FROM orders WHERE number=$1
+		SELECT 
+		    id, 
+		    number,
+		    upload_time,
+		    accrual,
+		    status,
+		    user_id
+		FROM orders 
+		WHERE number=$1
 	`
 	result, err := connect.Query(context.Background(), query, orderNum)
 	if err != nil {
@@ -320,7 +367,14 @@ func getOrderByNumber(orderNum string, conn string) (*model.Order, error) {
 	defer result.Close()
 
 	result.Next()
-	result.Scan(&order.ID, &userID)
+	result.Scan(
+		&order.ID,
+		&order.Number,
+		&order.UploadTime,
+		&order.Accrual,
+		&order.Status,
+		&userID,
+	)
 	user.ID = userID
 	order.User = &user
 	return &order, nil
