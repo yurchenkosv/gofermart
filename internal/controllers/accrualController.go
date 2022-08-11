@@ -28,7 +28,7 @@ func UpdateOrderStatusFromAccrualSys(order int, config config.ServerConfig) {
 		log.Error("error sending request to accrual system", err)
 		return
 	}
-
+	log.Info("received responce from accrual system: ", string(resp.Body()))
 	err = json.Unmarshal(resp.Body(), &accrualStatus)
 	if err != nil {
 		log.Error("error unmarshalling json: ", err)
