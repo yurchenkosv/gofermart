@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/yurchenkosv/gofermart/internal/config"
 	"github.com/yurchenkosv/gofermart/internal/dao"
+	"github.com/yurchenkosv/gofermart/internal/dto"
 	"github.com/yurchenkosv/gofermart/internal/errors"
 	"github.com/yurchenkosv/gofermart/internal/model"
 	"github.com/yurchenkosv/gofermart/internal/service"
@@ -14,7 +15,10 @@ import (
 )
 
 func UpdateOrderStatusFromAccrualSys(order int, config config.ServerConfig) {
-	var orderRepr = model.Order{}
+	var (
+		accrualStatus = dto.AccrualStatus{}
+		orderToUpdate = model.Order{}
+	)
 	client := resty.New().
 		SetBaseURL(config.AccrualSystemAddress).
 		SetRetryCount(3)
@@ -25,20 +29,23 @@ func UpdateOrderStatusFromAccrualSys(order int, config config.ServerConfig) {
 		return
 	}
 
-	err = json.Unmarshal(resp.Body(), &orderRepr)
+	err = json.Unmarshal(resp.Body(), &accrualStatus)
 	if err != nil {
 		log.Error("error unmarshalling json: ", err)
 		return
 	}
+	orderToUpdate.Status = accrualStatus.Status
+	orderToUpdate.Number = accrualStatus.OrderNum
+	orderToUpdate.Accrual = accrualStatus.Accrual
 
-	err = service.UpdateOrderStatus(orderRepr, config.Repo)
+	err = service.UpdateOrderStatus(orderToUpdate, config.Repo)
 	if err != nil {
 		switch err.(type) {
 		case *errors.NoOrdersError:
-			log.Errorf("no orders found by number %s, %s", orderRepr.Number, err)
+			log.Errorf("no orders found by number %s, %s", orderToUpdate.Number, err)
 			return
 		case *errors.OrderNoChangeError:
-			log.Warnf("order %s status not updated yet %s", orderRepr.Number, err)
+			log.Warnf("order %s status not updated yet %s", orderToUpdate.Number, err)
 		default:
 			log.Error("error updating order: ", err)
 			return

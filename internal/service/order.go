@@ -65,7 +65,7 @@ func UpdateOrderStatus(order model.Order, repository *dao.PostgresRepository) er
 	orderInDB.Accrual = order.Accrual
 	orderInDB.Status = order.Status
 
-	repository.SetOrder(&order).Save()
+	repository.SetOrder(orderInDB).Save()
 	if order.Accrual != nil {
 		balance, _ := repository.GetBalance(model.Balance{
 			User: model.User{

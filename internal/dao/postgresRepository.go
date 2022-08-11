@@ -282,7 +282,12 @@ func saveOrder(order *model.Order, conn string) error {
 		                   upload_time,
 		                   accrual
 		                   )
-		VALUES ($1, $2, $3, $4, $5); 
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (number) DO 
+		    UPDATE SET 	user_id=$1,
+		            	status=$3,
+		            	upload_time=$4,
+		            	accrual=$5
 	`
 	_, err = connect.Exec(context.Background(), query,
 		order.User.ID,
