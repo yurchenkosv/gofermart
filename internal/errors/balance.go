@@ -6,7 +6,7 @@ type NoWithdrawalsError struct {
 }
 
 type LowBalanceError struct {
-	CurrentBalance int
+	CurrentBalance float32
 }
 
 func (w *NoWithdrawalsError) Error() string {
