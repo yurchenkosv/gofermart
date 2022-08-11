@@ -106,7 +106,7 @@ func saveWithdraw(withdraw *model.Withdraw, conn string) error {
 		                        processed_at,
 		                        user_id
 		                   )
-		VALUES ($1, $2, $3, $4)
+		VALUES ($1, $2, $3, $4);
 	`
 	_, err = connect.Exec(context.Background(), query,
 		withdraw.Order,
@@ -165,7 +165,7 @@ func saveBalance(balance *model.Balance, conn string) error {
 		VALUES ($1, $2, $3)
 		ON CONFLICT (user_id) DO UPDATE
 		    SET balance=$2, 
-		        spent_all_time=$3 
+		        spent_all_time=$3 ;
 	`
 	_, err = connect.Exec(context.Background(), query,
 		balance.User.ID,
@@ -189,7 +189,7 @@ func getCurrentUserBalance(b model.Balance, conn string) (*model.Balance, error)
 	query := `
 		SELECT balance, spent_all_time
 		FROM balance
-		WHERE user_id=$1
+		WHERE user_id=$1;
 	`
 	result, err := connect.Query(context.Background(), query, balance.User.ID)
 	if err != nil {
@@ -213,7 +213,7 @@ func getOrdersByUserID(userID int, conn string) []model.Order {
 	query := `
 		SELECT id, number, upload_time, accrual, status
 		FROM orders
-		WHERE user_id=$1
+		WHERE user_id=$1;
 	`
 	result, err := connect.Query(context.Background(), query, userID)
 	if err != nil {
@@ -246,7 +246,7 @@ func getOrdersForUpdate(conn string) []*model.Order {
 		SELECT id, number, upload_time, accrual, status
 		FROM orders
 		WHERE status in ('NEW',
-		                'PROCESSING')
+		                'PROCESSING');
 	`
 	result, err := connect.Query(context.Background(), query)
 	if err != nil {
@@ -287,7 +287,7 @@ func saveOrder(order *model.Order, conn string) error {
 		    UPDATE SET 	user_id=$1,
 		            	status=$3,
 		            	upload_time=$4,
-		            	accrual=$5
+		            	accrual=$5;
 	`
 	_, err = connect.Exec(context.Background(), query,
 		order.User.ID,
@@ -328,7 +328,7 @@ func getUser(user *model.User, conn string) (*model.User, error) {
 	}
 	defer connect.Close(context.Background())
 	query := `
-		SELECT id FROM users WHERE username=$1 and password=$2
+		SELECT id FROM users WHERE username=$1 and password=$2;
 	`
 	result, err := connect.Query(context.Background(), query, user.Login, user.Password)
 	if err != nil {
@@ -345,41 +345,39 @@ func getUser(user *model.User, conn string) (*model.User, error) {
 }
 
 func getOrderByNumber(orderNum string, conn string) (*model.Order, error) {
-	var order = model.Order{Number: orderNum}
-	var user = model.User{}
-	var userID *int
+	var (
+		order  = model.Order{Number: orderNum}
+		user   = model.User{}
+		userID *int
+	)
 	connect, err := pgx.Connect(context.Background(), conn)
 	if err != nil {
 		log.Errorf("Unable to connect to database: %v\n", err)
 	}
 	defer connect.Close(context.Background())
 	query := `
-		SELECT 
-		    id, 
+		SELECT
+		    id,
 		    number,
 		    upload_time,
-		    accrual,
 		    status,
 		    user_id
 		FROM orders 
-		WHERE number=$1
+		WHERE number=$1;
 	`
-	result, err := connect.Query(context.Background(), query, orderNum)
+	err = connect.QueryRow(context.Background(), query, orderNum).
+		Scan(
+			&order.ID,
+			&order.Number,
+			&order.UploadTime,
+			&order.Status,
+			&userID,
+		)
 	if err != nil {
 		log.Error(err)
 		return nil, err
 	}
-	defer result.Close()
 
-	result.Next()
-	result.Scan(
-		&order.ID,
-		&order.Number,
-		&order.UploadTime,
-		&order.Accrual,
-		&order.Status,
-		&userID,
-	)
 	user.ID = userID
 	order.User = &user
 	return &order, nil
