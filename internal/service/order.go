@@ -6,6 +6,11 @@ import (
 	"github.com/yurchenkosv/gofermart/internal/errors"
 	"github.com/yurchenkosv/gofermart/internal/model"
 	"strconv"
+	"sync"
+)
+
+var (
+	mux sync.Mutex
 )
 
 func CreateOrder(order *model.Order, repository *dao.PostgresRepository) error {
@@ -41,7 +46,7 @@ func CreateOrder(order *model.Order, repository *dao.PostgresRepository) error {
 
 func GetUploadedOrdersForUser(order *model.Order, repository *dao.PostgresRepository) ([]model.Order, error) {
 	orders, err := repository.GetOrdersForUser(*order)
-	log.Infof("found orders for current user: ", orders)
+	log.Info("found orders for current user: ", orders)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +57,8 @@ func GetUploadedOrdersForUser(order *model.Order, repository *dao.PostgresReposi
 }
 
 func UpdateOrderStatus(order model.Order, repository *dao.PostgresRepository) error {
+	mux.Lock()
+	defer mux.Unlock()
 	orderInDB, err := repository.GetOrderByNumber(order.Number)
 	if err != nil {
 		return err
@@ -67,12 +74,16 @@ func UpdateOrderStatus(order model.Order, repository *dao.PostgresRepository) er
 
 	repository.SetOrder(orderInDB).Save()
 	if order.Accrual != nil {
-		balance, _ := repository.GetBalance(model.Balance{
+		balance, err := repository.GetBalance(model.Balance{
 			User: model.User{
 				ID: orderInDB.User.ID,
 			},
 		})
-		balance.Balance += *order.Accrual
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		balance.Balance += *orderInDB.Accrual
 		repository.SetBalance(*balance).Save()
 	}
 	return nil
