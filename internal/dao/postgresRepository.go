@@ -386,11 +386,6 @@ func getOrderByNumber(orderNum string, connect string) (*model.Order, error) {
 			&order.Status,
 			&userID,
 		)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-
 	user.ID = userID
 	order.User = &user
 	return &order, nil

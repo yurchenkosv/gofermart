@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS orders(
     user_id BIGINT,
     number VARCHAR(64) UNIQUE,
     upload_time TIMESTAMP WITH TIME ZONE,
-    accrual BIGINT,
+    accrual FLOAT,
     status VARCHAR(64)
 );
 
