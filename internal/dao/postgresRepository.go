@@ -50,15 +50,15 @@ func (repo *PostgresRepository) GetUser(user *model.User) (*model.User, error) {
 }
 
 func (repo *PostgresRepository) Save(obj interface{}) error {
-	switch obj.(type) {
+	switch x := obj.(type) {
 	case *model.User:
-		return saveUser(obj.(*model.User), repo.Conn)
+		return saveUser(x, repo.Conn)
 	case *model.Order:
-		return saveOrder(obj.(*model.Order), repo.Conn)
+		return saveOrder(x, repo.Conn)
 	case *model.Balance:
-		return saveBalance(obj.(*model.Balance), repo.Conn)
+		return saveBalance(x, repo.Conn)
 	case *model.Withdraw:
-		return saveWithdraw(obj.(*model.Withdraw), repo.Conn)
+		return saveWithdraw(x, repo.Conn)
 	default:
 		return errors.UnsupportedModelError{}
 	}
