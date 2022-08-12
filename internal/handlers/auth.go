@@ -32,7 +32,7 @@ func HandleUserRegistration(writer http.ResponseWriter, request *http.Request) {
 			CheckErrors(e, writer)
 		}
 	}
-	writer = *SetToken(writer, request, *updatedUser)
+	writer = SetToken(writer, request, *updatedUser)
 	writer.WriteHeader(http.StatusOK)
 }
 
@@ -60,6 +60,6 @@ func HandleUserLogin(writer http.ResponseWriter, request *http.Request) {
 			CheckErrors(e, writer)
 		}
 	}
-	writer = *SetToken(writer, request, *updatedUser)
+	writer = SetToken(writer, request, *updatedUser)
 	writer.WriteHeader(http.StatusOK)
 }

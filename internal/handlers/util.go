@@ -22,7 +22,7 @@ func GetConfigFromContext(ctx context.Context) config.ServerConfig {
 	return *cfg
 }
 
-func SetToken(writer http.ResponseWriter, request *http.Request, user model.User) *http.ResponseWriter {
+func SetToken(writer http.ResponseWriter, request *http.Request, user model.User) http.ResponseWriter {
 	claims := map[string]interface{}{
 		"user_id": *user.ID,
 	}
@@ -32,11 +32,16 @@ func SetToken(writer http.ResponseWriter, request *http.Request, user model.User
 
 	jwtauth.SetIssuedAt(claims, currentTime)
 	jwtauth.SetExpiry(claims, currentTime.Add(5*time.Minute))
-	_, token, _ := tokenAuth.Encode(claims)
+	_, token, err := tokenAuth.Encode(claims)
+
+	if err != nil {
+		log.Error("error setting token for user:", err)
+		return writer
+	}
 
 	writer.Header().Add("jwt", token)
 	writer.Header().Add("Set-Cookie", "jwt="+token)
-	return &writer
+	return writer
 }
 
 func GetUserIDFromToken(ctx context.Context) int {
