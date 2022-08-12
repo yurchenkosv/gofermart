@@ -390,7 +390,7 @@ func getOrderByNumber(orderNum string, connect string) (*model.Order, error) {
 		)
 	if err != nil {
 		log.Error(err)
-		return nil, err
+		return &order, nil
 	}
 	user.ID = userID
 	order.User = &user
