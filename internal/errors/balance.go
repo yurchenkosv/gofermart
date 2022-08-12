@@ -14,5 +14,5 @@ func (w *NoWithdrawalsError) Error() string {
 }
 
 func (b LowBalanceError) Error() string {
-	return fmt.Sprintf("not enought balance, now: %d", b.CurrentBalance)
+	return fmt.Sprintf("not enought balance, now: %f", b.CurrentBalance)
 }

@@ -23,15 +23,15 @@ type OrderNoChangeError struct {
 }
 
 func (err *OrderAlreadyAcceptedCurrentUserError) Error() string {
-	return fmt.Sprintf("order with number %d already accepted from user %d", err.OrderNumber, err.UserID)
+	return fmt.Sprintf("order with number %s already accepted from user %d", err.OrderNumber, err.UserID)
 }
 
 func (err *OrderAlreadyAcceptedDifferentUserError) Error() string {
-	return fmt.Sprintf("order with number %d already accepted from different user %d", err.OrderNumber, err.UserID)
+	return fmt.Sprintf("order with number %s already accepted from different user %d", err.OrderNumber, err.UserID)
 }
 
 func (err *OrderFormatError) Error() string {
-	return fmt.Sprintf("order %d invalid by format", err.OrderNumber)
+	return fmt.Sprintf("order %s invalid by format", err.OrderNumber)
 }
 
 func (err *NoOrdersError) Error() string {

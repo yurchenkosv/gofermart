@@ -139,6 +139,7 @@ func getWithdrawalsForCurrentUser(w model.Withdraw, connect string) ([]*model.Wi
 		log.Error(err)
 		return nil, err
 	}
+	_ = rows.Err()
 	for rows.Next() {
 		withdraw := model.Withdraw{}
 		err := rows.Scan(
@@ -197,6 +198,7 @@ func getCurrentUserBalance(b model.Balance, connect string) (*model.Balance, err
 		WHERE user_id=$1;
 	`
 	result, err := conn.Query(query, balance.User.ID)
+	_ = result.Err()
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -221,6 +223,7 @@ func getOrdersByUserID(userID int, connect string) []model.Order {
 		WHERE user_id=$1;
 	`
 	result, err := conn.Query(query, userID)
+	_ = result.Err()
 	if err != nil {
 		log.Error(err)
 		return nil
@@ -258,6 +261,7 @@ func getOrdersForUpdate(connect string) []*model.Order {
 		                'PROCESSING');
 	`
 	result, err := conn.Query(query)
+	_ = result.Err()
 	if err != nil {
 		log.Error(err)
 		return nil
@@ -343,15 +347,13 @@ func getUser(user *model.User, connect string) (*model.User, error) {
 	query := `
 		SELECT id FROM users WHERE username=$1 and password=$2;
 	`
-	result, err := conn.Query(query, user.Login, user.Password)
+	err = conn.
+		QueryRow(query, user.Login, user.Password).
+		Scan(&userID)
 	if err != nil {
 		log.Error(err)
 		return nil, err
 	}
-	defer result.Close()
-
-	result.Next()
-	result.Scan(&userID)
 	user.ID = userID
 
 	return user, nil
@@ -386,6 +388,10 @@ func getOrderByNumber(orderNum string, connect string) (*model.Order, error) {
 			&order.Status,
 			&userID,
 		)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
 	user.ID = userID
 	order.User = &user
 	return &order, nil
