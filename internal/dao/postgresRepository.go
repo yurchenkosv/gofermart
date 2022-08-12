@@ -4,15 +4,12 @@ import (
 	_ "github.com/jackc/pgx/v4"
 	"github.com/jmoiron/sqlx"
 	log "github.com/sirupsen/logrus"
+	"github.com/yurchenkosv/gofermart/internal/errors"
 	"github.com/yurchenkosv/gofermart/internal/model"
 )
 
 type PostgresRepository struct {
-	user     *model.User
-	balance  *model.Balance
-	order    *model.Order
-	withdraw *model.Withdraw
-	Conn     string
+	Conn string
 }
 
 func NewPGRepo(dbURI string) *PostgresRepository {
@@ -28,24 +25,9 @@ func (repo *PostgresRepository) GetWithdrawals(withdraw model.Withdraw) ([]*mode
 	return getWithdrawalsForCurrentUser(withdraw, repo.Conn)
 }
 
-func (repo *PostgresRepository) SetWithdraw(withdraw *model.Withdraw) *PostgresRepository {
-	repo.withdraw = withdraw
-	return repo
-}
-
-func (repo *PostgresRepository) SetBalance(balance model.Balance) *PostgresRepository {
-	repo.balance = &balance
-	return repo
-}
-
 func (repo *PostgresRepository) GetBalance(balance model.Balance) (*model.Balance, error) {
 	b, err := getCurrentUserBalance(balance, repo.Conn)
 	return b, err
-}
-
-func (repo *PostgresRepository) SetOrder(order *model.Order) *PostgresRepository {
-	repo.order = order
-	return repo
 }
 
 func (repo *PostgresRepository) GetOrdersForUser(order model.Order) ([]model.Order, error) {
@@ -63,33 +45,27 @@ func (repo *PostgresRepository) GetOrderByNumber(orderNumber string) (*model.Ord
 	return getOrderByNumber(orderNumber, repo.Conn)
 }
 
-func (repo *PostgresRepository) SetUser(user *model.User) *PostgresRepository {
-	repo.user = user
-	return repo
-}
-
 func (repo *PostgresRepository) GetUser(user *model.User) (*model.User, error) {
 	return getUser(user, repo.Conn)
 }
 
-func (repo *PostgresRepository) Save() {
-	if repo.user != nil {
-		saveUser(repo.user, repo.Conn)
-		repo.user = nil
+func (repo *PostgresRepository) Save(obj interface{}) error {
+	switch obj.(type) {
+	case *model.User:
+		user := obj.(*model.User)
+		return saveUser(user, repo.Conn)
+	case *model.Order:
+		order := obj.(*model.Order)
+		return saveOrder(order, repo.Conn)
+	case *model.Balance:
+		balance := obj.(*model.Balance)
+		return saveBalance(balance, repo.Conn)
+	case *model.Withdraw:
+		withdraw := obj.(*model.Withdraw)
+		return saveWithdraw(withdraw, repo.Conn)
+	default:
+		return errors.UnsupportedModelError{}
 	}
-	if repo.order != nil {
-		saveOrder(repo.order, repo.Conn)
-		repo.order = nil
-	}
-	if repo.balance != nil {
-		saveBalance(repo.balance, repo.Conn)
-		repo.balance = nil
-	}
-	if repo.withdraw != nil {
-		saveWithdraw(repo.withdraw, repo.Conn)
-		repo.withdraw = nil
-	}
-
 }
 
 func saveWithdraw(withdraw *model.Withdraw, connect string) error {

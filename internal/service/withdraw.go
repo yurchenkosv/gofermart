@@ -36,7 +36,7 @@ func ProcessWithdraw(withdraw model.Withdraw, repository *dao.PostgresRepository
 	b.SpentAllTime = currentBalance.SpentAllTime + withdraw.Sum
 
 	//TODO надо делать списание и обновление баланса в одной транзакции
-	repository.SetBalance(b).Save()
-	repository.SetWithdraw(&withdraw).Save()
+	repository.Save(&b)
+	repository.Save(&withdraw)
 	return nil
 }

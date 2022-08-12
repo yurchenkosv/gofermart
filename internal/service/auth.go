@@ -12,7 +12,10 @@ func RegisterUser(user *model.User, repository *dao.PostgresRepository) (*model.
 		err := errors.UserAlreadyExistsError{User: user.Login}
 		return nil, &err
 	}
-	repository.SetUser(user).Save()
+	err := repository.Save(user)
+	if err != nil {
+		return nil, err
+	}
 	savedUser, _ = repository.GetUser(user)
 	return savedUser, nil
 }

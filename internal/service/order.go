@@ -40,7 +40,10 @@ func CreateOrder(order *model.Order, repository *dao.PostgresRepository) error {
 			OrderNumber: order.Number,
 		}
 	}
-	repository.SetOrder(order).Save()
+	err = repository.Save(order)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -72,7 +75,11 @@ func UpdateOrderStatus(order model.Order, repository *dao.PostgresRepository) er
 	orderInDB.Accrual = order.Accrual
 	orderInDB.Status = order.Status
 
-	repository.SetOrder(orderInDB).Save()
+	err = repository.Save(orderInDB)
+	if err != nil {
+		return err
+	}
+
 	if order.Accrual != nil {
 		balance, err := repository.GetBalance(model.Balance{
 			User: model.User{
@@ -84,7 +91,10 @@ func UpdateOrderStatus(order model.Order, repository *dao.PostgresRepository) er
 			return err
 		}
 		balance.Balance += *orderInDB.Accrual
-		repository.SetBalance(*balance).Save()
+		err = repository.Save(balance)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

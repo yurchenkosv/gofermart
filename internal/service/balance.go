@@ -9,6 +9,6 @@ func GetCurrentUserBalance(balance model.Balance, repository *dao.PostgresReposi
 	return repository.GetBalance(balance)
 }
 
-func UpdateBalance(balance model.Balance, repository *dao.PostgresRepository) {
-	repository.SetBalance(balance).Save()
+func UpdateBalance(balance model.Balance, repository *dao.PostgresRepository) error {
+	return repository.Save(&balance)
 }
