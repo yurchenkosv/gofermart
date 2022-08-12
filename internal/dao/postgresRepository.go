@@ -352,7 +352,7 @@ func getUser(user *model.User, connect string) (*model.User, error) {
 		Scan(&userID)
 	if err != nil {
 		log.Error(err)
-		return nil, err
+		return user, err
 	}
 	user.ID = userID
 
