@@ -5,10 +5,10 @@ import (
 	"github.com/yurchenkosv/gofermart/internal/model"
 )
 
-func GetCurrentUserBalance(balance model.Balance, repository *dao.PostgresRepository) (*model.Balance, error) {
+func GetCurrentUserBalance(balance model.Balance, repository dao.Repository) (*model.Balance, error) {
 	return repository.GetBalance(balance)
 }
 
-func UpdateBalance(balance model.Balance, repository *dao.PostgresRepository) error {
+func UpdateBalance(balance model.Balance, repository dao.Repository) error {
 	return repository.Save(&balance)
 }

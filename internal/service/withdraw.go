@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func GetWithdrawalsForCurrentUser(withdraw model.Withdraw, repo *dao.PostgresRepository) ([]*model.Withdraw, error) {
+func GetWithdrawalsForCurrentUser(withdraw model.Withdraw, repo dao.Repository) ([]*model.Withdraw, error) {
 	withdrawals, err := repo.GetWithdrawals(withdraw)
 	if err != nil {
 		return nil, err
@@ -18,7 +18,7 @@ func GetWithdrawalsForCurrentUser(withdraw model.Withdraw, repo *dao.PostgresRep
 	return withdrawals, nil
 }
 
-func ProcessWithdraw(withdraw model.Withdraw, repository *dao.PostgresRepository) error {
+func ProcessWithdraw(withdraw model.Withdraw, repository dao.Repository) error {
 	orderNum, _ := strconv.Atoi(withdraw.Order)
 	if !checkOrderFormat(orderNum) {
 		return &errors.OrderFormatError{OrderNumber: withdraw.Order}

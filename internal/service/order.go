@@ -13,7 +13,7 @@ var (
 	mux sync.Mutex
 )
 
-func CreateOrder(order *model.Order, repository *dao.PostgresRepository) error {
+func CreateOrder(order *model.Order, repository dao.Repository) error {
 	checkOrder, err := repository.GetOrderByNumber(order.Number)
 	if err != nil {
 		return err
@@ -47,7 +47,7 @@ func CreateOrder(order *model.Order, repository *dao.PostgresRepository) error {
 	return nil
 }
 
-func GetUploadedOrdersForUser(order *model.Order, repository *dao.PostgresRepository) ([]model.Order, error) {
+func GetUploadedOrdersForUser(order *model.Order, repository dao.Repository) ([]model.Order, error) {
 	orders, err := repository.GetOrdersForUser(*order)
 	log.Info("found orders for current user: ", orders)
 	if err != nil {
@@ -59,7 +59,7 @@ func GetUploadedOrdersForUser(order *model.Order, repository *dao.PostgresReposi
 	return orders, nil
 }
 
-func UpdateOrderStatus(order model.Order, repository *dao.PostgresRepository) error {
+func UpdateOrderStatus(order model.Order, repository dao.Repository) error {
 	mux.Lock()
 	defer mux.Unlock()
 	orderInDB, err := repository.GetOrderByNumber(order.Number)

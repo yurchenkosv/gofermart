@@ -6,7 +6,7 @@ import (
 	"github.com/yurchenkosv/gofermart/internal/model"
 )
 
-func RegisterUser(user *model.User, repository *dao.PostgresRepository) (*model.User, error) {
+func RegisterUser(user *model.User, repository dao.Repository) (*model.User, error) {
 	savedUser, _ := repository.GetUser(user)
 	if savedUser.ID != nil {
 		err := errors.UserAlreadyExistsError{User: user.Login}
@@ -20,7 +20,7 @@ func RegisterUser(user *model.User, repository *dao.PostgresRepository) (*model.
 	return savedUser, nil
 }
 
-func AuthenticateUser(user *model.User, repository *dao.PostgresRepository) (*model.User, error) {
+func AuthenticateUser(user *model.User, repository dao.Repository) (*model.User, error) {
 	user, _ = repository.GetUser(user)
 	if user.ID == nil {
 		err := errors.InvalidUserError{}
