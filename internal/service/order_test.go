@@ -66,17 +66,15 @@ func TestOrderService_CreateOrder(t *testing.T) {
 		{
 			name: "should return OrderAlreadyAcceptedDifferentUserError",
 			prepare: func(f *fields, order *model.Order) {
-				orderId := 1
-				userId := 2
-				order.ID = &orderId
 				orderInDB := *order
-				orderInDB.User = &model.User{ID: &userId}
+				orderInDB.User = &model.User{ID: GetIntPointer(2)}
 				gomock.InOrder(
 					f.repo.EXPECT().GetOrderByNumber(order.Number).Return(&orderInDB, nil),
 				)
 			},
 			args: args{order: &model.Order{
-				User:       &model.User{ID: new(int)},
+				ID:         GetIntPointer(1),
+				User:       &model.User{ID: GetIntPointer(1)},
 				Number:     "2377225624",
 				Status:     "NEW",
 				UploadTime: time.Unix(176237653, 0),

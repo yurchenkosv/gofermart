@@ -11,6 +11,7 @@ import (
 	"github.com/yurchenkosv/gofermart/internal/dao"
 	"github.com/yurchenkosv/gofermart/internal/routers"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -36,10 +37,10 @@ func main() {
 	tokenAuth = jwtauth.New("HS256", token, nil)
 	cfg.TokenAuth = tokenAuth
 	cfg.Repo = dao.NewPGRepo(cfg.DatabaseURI)
+	osSignal := make(chan os.Signal, 1)
 
 	Migrate(cfg)
 	router := routers.NewRouter(cfg)
-
 	server := http.Server{
 		Addr:    cfg.RunAddress,
 		Handler: router,
@@ -50,6 +51,12 @@ func main() {
 		Second().
 		Do(controllers.StatusCheckLoop, cfg)
 	sched.StartAsync()
+
+	go func() {
+		<-osSignal
+		sched.Stop()
+		os.Exit(0)
+	}()
 	log.Fatal(server.ListenAndServe())
 
 }
