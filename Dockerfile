@@ -1,9 +1,9 @@
 FROM golang:1.18 AS builder
 WORKDIR WORKDIR /build
-COPY go.mod .
-RUN go mod download
 COPY . .
-RUN GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -o /build/gofermart ./cmd/gophermart/
+RUN go mod download && \
+    go test ./... && \
+    GOOS=linux CGO_ENABLED=0 GOARCH=amd64 go build -o /build/gofermart ./cmd/gophermart/
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates && \

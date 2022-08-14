@@ -36,7 +36,13 @@ func ProcessWithdraw(withdraw model.Withdraw, repository dao.Repository) error {
 	b.SpentAllTime = currentBalance.SpentAllTime + withdraw.Sum
 
 	//TODO надо делать списание и обновление баланса в одной транзакции
-	repository.Save(&b)
-	repository.Save(&withdraw)
+	err := repository.Save(&b)
+	if err != nil {
+		return err
+	}
+	err = repository.Save(&withdraw)
+	if err != nil {
+		return err
+	}
 	return nil
 }
