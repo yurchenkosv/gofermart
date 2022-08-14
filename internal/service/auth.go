@@ -11,15 +11,15 @@ type Auth interface {
 	AuthenticateUser(user *model.User) (*model.User, error)
 }
 
-type UserAuth struct {
+type AuthService struct {
 	repo dao.Repository
 }
 
-func NewAuthService(repo dao.Repository) UserAuth {
-	return UserAuth{repo: repo}
+func NewAuthService(repo dao.Repository) Auth {
+	return AuthService{repo: repo}
 }
 
-func (auth UserAuth) RegisterUser(user *model.User) (*model.User, error) {
+func (auth AuthService) RegisterUser(user *model.User) (*model.User, error) {
 	savedUser, _ := auth.repo.GetUser(user)
 	if savedUser.ID != nil {
 		err := errors.UserAlreadyExistsError{User: user.Login}
@@ -33,7 +33,7 @@ func (auth UserAuth) RegisterUser(user *model.User) (*model.User, error) {
 	return savedUser, nil
 }
 
-func (auth UserAuth) AuthenticateUser(user *model.User) (*model.User, error) {
+func (auth AuthService) AuthenticateUser(user *model.User) (*model.User, error) {
 	user, _ = auth.repo.GetUser(user)
 	if user.ID == nil {
 		err := errors.InvalidUserError{}

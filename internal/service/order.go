@@ -23,7 +23,7 @@ type OrderService struct {
 	repo dao.Repository
 }
 
-func NewOrderService(repo dao.Repository) OrderService {
+func NewOrderService(repo dao.Repository) Order {
 	return OrderService{repo: repo}
 }
 

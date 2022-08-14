@@ -13,7 +13,7 @@ type BalanceService struct {
 	repo dao.Repository
 }
 
-func NewBalance(repo dao.Repository) BalanceService {
+func NewBalance(repo dao.Repository) Balance {
 	return BalanceService{repo: repo}
 }
 

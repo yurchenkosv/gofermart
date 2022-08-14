@@ -16,7 +16,7 @@ type WithdrawService struct {
 	repo dao.Repository
 }
 
-func NewWithdrawService(repo dao.Repository) WithdrawService {
+func NewWithdrawService(repo dao.Repository) Withdraw {
 	return WithdrawService{repo: repo}
 }
 
@@ -41,7 +41,7 @@ func (s WithdrawService) ProcessWithdraw(withdraw model.Withdraw) error {
 
 	expectedAfterWithdraw := currentBalance.Balance - withdraw.Sum
 	if expectedAfterWithdraw < 0 {
-		return errors.LowBalanceError{
+		return &errors.LowBalanceError{
 			CurrentBalance: currentBalance.Balance,
 		}
 	}
@@ -58,15 +58,4 @@ func (s WithdrawService) ProcessWithdraw(withdraw model.Withdraw) error {
 		return err
 	}
 	return nil
-}
-
-func GetWithdrawalsForCurrentUser(withdraw model.Withdraw, repo dao.Repository) ([]*model.Withdraw, error) {
-	withdrawals, err := repo.GetWithdrawals(withdraw)
-	if err != nil {
-		return nil, err
-	}
-	if len(withdrawals) == 0 {
-		return nil, &errors.NoWithdrawalsError{}
-	}
-	return withdrawals, nil
 }
