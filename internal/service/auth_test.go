@@ -34,7 +34,7 @@ func TestAuthenticateUser(t *testing.T) {
 			name: "should successfully return user",
 			want: &model.User{
 				Login:    "test",
-				Password: "test",
+				Password: "n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=",
 			},
 			wantErr: false,
 		},

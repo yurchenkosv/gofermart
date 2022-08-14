@@ -25,11 +25,15 @@ func init() {
 }
 
 func main() {
-	err := cfg.Parse()
+	token, err := generateRandomToken()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = cfg.Parse()
 	if err != nil {
 		log.Error(err)
 	}
-	tokenAuth = jwtauth.New("HS256", []byte("secret"), nil)
+	tokenAuth = jwtauth.New("HS256", token, nil)
 	cfg.TokenAuth = tokenAuth
 	cfg.Repo = dao.NewPGRepo(cfg.DatabaseURI)
 
@@ -47,4 +51,5 @@ func main() {
 		Do(controllers.StatusCheckLoop, cfg)
 	sched.StartAsync()
 	log.Fatal(server.ListenAndServe())
+
 }
