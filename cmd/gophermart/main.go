@@ -12,6 +12,8 @@ import (
 	"github.com/yurchenkosv/gofermart/internal/routers"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -37,26 +39,33 @@ func main() {
 	tokenAuth = jwtauth.New("HS256", token, nil)
 	cfg.TokenAuth = tokenAuth
 	cfg.Repo = dao.NewPGRepo(cfg.DatabaseURI)
+
 	osSignal := make(chan os.Signal, 1)
+	signal.Notify(osSignal, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
 	Migrate(cfg)
+
+	sched := gocron.NewScheduler(time.UTC)
+	_, err = sched.EveryRandom(2, 7).
+		Second().
+		Do(controllers.StatusCheckLoop, cfg)
+	if err != nil {
+		log.Fatal("cannot create scheduler for update tasks", err)
+	}
+	sched.StartAsync()
+
 	router := routers.NewRouter(cfg)
 	server := http.Server{
 		Addr:    cfg.RunAddress,
 		Handler: router,
 	}
 
-	sched := gocron.NewScheduler(time.UTC)
-	sched.EveryRandom(2, 7).
-		Second().
-		Do(controllers.StatusCheckLoop, cfg)
-	sched.StartAsync()
-
 	go func() {
 		<-osSignal
 		sched.Stop()
 		os.Exit(0)
 	}()
+
 	log.Fatal(server.ListenAndServe())
 
 }
