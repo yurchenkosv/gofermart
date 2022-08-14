@@ -19,9 +19,9 @@ func HandleUserRegistration(writer http.ResponseWriter, request *http.Request) {
 	err = json.Unmarshal(data, &user)
 	CheckErrors(err, writer)
 	cfg := GetConfigFromContext(request.Context())
-	repo := cfg.Repo
+	auth := service.NewAuthService(cfg.Repo)
 
-	updatedUser, err := service.RegisterUser(&user, repo)
+	updatedUser, err := auth.RegisterUser(&user)
 	if err != nil {
 		switch e := err.(type) {
 		case *errors.UserAlreadyExistsError:
@@ -46,9 +46,9 @@ func HandleUserLogin(writer http.ResponseWriter, request *http.Request) {
 	CheckErrors(err, writer)
 
 	cfg := GetConfigFromContext(request.Context())
-	repo := cfg.Repo
+	auth := service.NewAuthService(cfg.Repo)
 
-	updatedUser, err := service.AuthenticateUser(&user, repo)
+	updatedUser, err := auth.AuthenticateUser(&user)
 	if err != nil {
 		switch e := err.(type) {
 

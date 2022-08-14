@@ -37,8 +37,9 @@ func UpdateOrderStatusFromAccrualSys(order int, config *config.ServerConfig) {
 	orderToUpdate.Status = accrualStatus.Status
 	orderToUpdate.Number = accrualStatus.OrderNum
 	orderToUpdate.Accrual = accrualStatus.Accrual
+	orderService := service.NewOrderService(config.Repo)
 
-	err = service.UpdateOrderStatus(orderToUpdate, config.Repo)
+	err = orderService.UpdateOrderStatus(orderToUpdate)
 	if err != nil {
 		switch err.(type) {
 		case *errors.NoOrdersError:

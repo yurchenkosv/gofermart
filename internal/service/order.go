@@ -13,8 +13,22 @@ var (
 	mux sync.Mutex
 )
 
-func CreateOrder(order *model.Order, repository dao.Repository) error {
-	checkOrder, err := repository.GetOrderByNumber(order.Number)
+type Order interface {
+	CreateOrder(order *model.Order) error
+	GetUploadedOrdersForUser(order *model.Order) ([]model.Order, error)
+	UpdateOrderStatus(order model.Order) error
+}
+
+type OrderService struct {
+	repo dao.Repository
+}
+
+func NewOrderService(repo dao.Repository) OrderService {
+	return OrderService{repo: repo}
+}
+
+func (s OrderService) CreateOrder(order *model.Order) error {
+	checkOrder, err := s.repo.GetOrderByNumber(order.Number)
 	if err != nil {
 		return err
 	}
@@ -40,15 +54,15 @@ func CreateOrder(order *model.Order, repository dao.Repository) error {
 			OrderNumber: order.Number,
 		}
 	}
-	err = repository.Save(order)
+	err = s.repo.Save(order)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func GetUploadedOrdersForUser(order *model.Order, repository dao.Repository) ([]model.Order, error) {
-	orders, err := repository.GetOrdersForUser(*order)
+func (s OrderService) GetUploadedOrdersForUser(order *model.Order) ([]model.Order, error) {
+	orders, err := s.repo.GetOrdersForUser(*order)
 	log.Info("found orders for current user: ", orders)
 	if err != nil {
 		return nil, err
@@ -59,10 +73,10 @@ func GetUploadedOrdersForUser(order *model.Order, repository dao.Repository) ([]
 	return orders, nil
 }
 
-func UpdateOrderStatus(order model.Order, repository dao.Repository) error {
+func (s OrderService) UpdateOrderStatus(order model.Order) error {
 	mux.Lock()
 	defer mux.Unlock()
-	orderInDB, err := repository.GetOrderByNumber(order.Number)
+	orderInDB, err := s.repo.GetOrderByNumber(order.Number)
 	if err != nil {
 		return err
 	}
@@ -75,13 +89,13 @@ func UpdateOrderStatus(order model.Order, repository dao.Repository) error {
 	orderInDB.Accrual = order.Accrual
 	orderInDB.Status = order.Status
 
-	err = repository.Save(orderInDB)
+	err = s.repo.Save(orderInDB)
 	if err != nil {
 		return err
 	}
 
 	if order.Accrual != nil {
-		balance, err := repository.GetBalance(model.Balance{
+		balance, err := s.repo.GetBalance(model.Balance{
 			User: model.User{
 				ID: orderInDB.User.ID,
 			},
@@ -91,7 +105,7 @@ func UpdateOrderStatus(order model.Order, repository dao.Repository) error {
 			return err
 		}
 		balance.Balance += *orderInDB.Accrual
-		err = repository.Save(balance)
+		err = s.repo.Save(balance)
 		if err != nil {
 			return err
 		}

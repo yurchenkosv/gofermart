@@ -7,8 +7,21 @@ import (
 	"strconv"
 )
 
-func GetWithdrawalsForCurrentUser(withdraw model.Withdraw, repo dao.Repository) ([]*model.Withdraw, error) {
-	withdrawals, err := repo.GetWithdrawals(withdraw)
+type Withdraw interface {
+	GetWithdrawalsForCurrentUser(withdraw model.Withdraw) ([]*model.Withdraw, error)
+	ProcessWithdraw(withdraw model.Withdraw) error
+}
+
+type WithdrawService struct {
+	repo dao.Repository
+}
+
+func NewWithdrawService(repo dao.Repository) WithdrawService {
+	return WithdrawService{repo: repo}
+}
+
+func (s WithdrawService) GetWithdrawalsForCurrentUser(withdraw model.Withdraw) ([]*model.Withdraw, error) {
+	withdrawals, err := s.repo.GetWithdrawals(withdraw)
 	if err != nil {
 		return nil, err
 	}
@@ -18,13 +31,13 @@ func GetWithdrawalsForCurrentUser(withdraw model.Withdraw, repo dao.Repository) 
 	return withdrawals, nil
 }
 
-func ProcessWithdraw(withdraw model.Withdraw, repository dao.Repository) error {
+func (s WithdrawService) ProcessWithdraw(withdraw model.Withdraw) error {
 	orderNum, _ := strconv.Atoi(withdraw.Order)
 	if !checkOrderFormat(orderNum) {
 		return &errors.OrderFormatError{OrderNumber: withdraw.Order}
 	}
 	b := model.Balance{User: model.User{ID: withdraw.User.ID}}
-	currentBalance, _ := repository.GetBalance(b)
+	currentBalance, _ := s.repo.GetBalance(b)
 
 	expectedAfterWithdraw := currentBalance.Balance - withdraw.Sum
 	if expectedAfterWithdraw < 0 {
@@ -36,13 +49,24 @@ func ProcessWithdraw(withdraw model.Withdraw, repository dao.Repository) error {
 	b.SpentAllTime = currentBalance.SpentAllTime + withdraw.Sum
 
 	//TODO надо делать списание и обновление баланса в одной транзакции
-	err := repository.Save(&b)
+	err := s.repo.Save(&b)
 	if err != nil {
 		return err
 	}
-	err = repository.Save(&withdraw)
+	err = s.repo.Save(&withdraw)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func GetWithdrawalsForCurrentUser(withdraw model.Withdraw, repo dao.Repository) ([]*model.Withdraw, error) {
+	withdrawals, err := repo.GetWithdrawals(withdraw)
+	if err != nil {
+		return nil, err
+	}
+	if len(withdrawals) == 0 {
+		return nil, &errors.NoWithdrawalsError{}
+	}
+	return withdrawals, nil
 }

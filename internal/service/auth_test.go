@@ -46,7 +46,8 @@ func TestAuthenticateUser(t *testing.T) {
 			defer ctrl.Finish()
 			authRepo := mock_dao.NewMockRepository(ctrl)
 			tt.behavior(authRepo, tt.args.user, tt.id)
-			got, err := AuthenticateUser(tt.args.user, authRepo)
+			authService := NewAuthService(authRepo)
+			got, err := authService.AuthenticateUser(tt.args.user)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("AuthenticateUser() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -96,8 +97,9 @@ func TestRegisterUser(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			authRepo := mock_dao.NewMockRepository(ctrl)
+			authService := NewAuthService(authRepo)
 			tt.behavior(authRepo, tt.args.user, tt.id)
-			got, err := RegisterUser(tt.args.user, authRepo)
+			got, err := authService.RegisterUser(tt.args.user)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("AuthenticateUser() error = %v, wantErr %v", err, tt.wantErr)
 				return

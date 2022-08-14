@@ -28,10 +28,11 @@ func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
 	order.Status = model.OrderStatusNew
 	order.User = &model.User{ID: &userID}
 	order.UploadTime = now
+	orderService := service.NewOrderService(repo)
 
 	log.Infof("creating order with number %s, by user %d", orderNum, userID)
 
-	err = service.CreateOrder(&order, repo)
+	err = orderService.CreateOrder(&order)
 	if err != nil {
 		switch err.(type) {
 		case *errors.OrderAlreadyAcceptedDifferentUserError:
@@ -61,7 +62,8 @@ func HandleGetOrders(writer http.ResponseWriter, request *http.Request) {
 		},
 	}
 	log.Infof("getting all orders with user %d", userID)
-	orders, err := service.GetUploadedOrdersForUser(&order, repo)
+	orderSerivice := service.NewOrderService(repo)
+	orders, err := orderSerivice.GetUploadedOrdersForUser(&order)
 	if err != nil {
 		switch err.(type) {
 		case *errors.NoOrdersError:

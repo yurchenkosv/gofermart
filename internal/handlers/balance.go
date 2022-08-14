@@ -14,10 +14,11 @@ import (
 func HandleGetBalance(writer http.ResponseWriter, request *http.Request) {
 	userID := GetUserIDFromToken(request.Context())
 	cfg := GetConfigFromContext(request.Context())
-	repo := cfg.Repo
+	balanceService := service.NewBalance(cfg.Repo)
 
 	b := model.Balance{User: model.User{ID: &userID}}
-	balance, err := service.GetCurrentUserBalance(b, repo)
+	balance, err := balanceService.GetCurrentUserBalance(b)
+
 	if err != nil {
 		log.Error("error getting balance", err)
 		CheckErrors(err, writer)
@@ -30,8 +31,8 @@ func HandleGetBalance(writer http.ResponseWriter, request *http.Request) {
 func HandleBalanceWithdraw(writer http.ResponseWriter, request *http.Request) {
 	userID := GetUserIDFromToken(request.Context())
 	cfg := GetConfigFromContext(request.Context())
-	repo := cfg.Repo
 	withdraw := model.Withdraw{User: model.User{ID: &userID}}
+	withdrawService := service.NewWithdrawService(cfg.Repo)
 
 	body, _ := io.ReadAll(request.Body)
 	err := json.Unmarshal(body, &withdraw)
@@ -41,7 +42,7 @@ func HandleBalanceWithdraw(writer http.ResponseWriter, request *http.Request) {
 
 	withdraw.ProcessedAt = time.Now()
 
-	err = service.ProcessWithdraw(withdraw, repo)
+	err = withdrawService.ProcessWithdraw(withdraw)
 	if err != nil {
 		switch err.(type) {
 		case *errors.LowBalanceError:
@@ -60,10 +61,10 @@ func HandleBalanceWithdraw(writer http.ResponseWriter, request *http.Request) {
 func HandleGetBalanceWithdraws(writer http.ResponseWriter, request *http.Request) {
 	userID := GetUserIDFromToken(request.Context())
 	cfg := GetConfigFromContext(request.Context())
-	repo := cfg.Repo
 	withdraw := model.Withdraw{User: model.User{ID: &userID}}
+	withdrawService := service.NewWithdrawService(cfg.Repo)
 
-	withdrawals, err := service.GetWithdrawalsForCurrentUser(withdraw, repo)
+	withdrawals, err := withdrawService.GetWithdrawalsForCurrentUser(withdraw)
 	if err != nil {
 		switch err.(type) {
 		case *errors.NoWithdrawalsError:
