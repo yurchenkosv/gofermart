@@ -86,17 +86,18 @@ func (repo *PostgresRepository) GetWithdrawalsByUserID(userID int) ([]*model.Wit
 }
 
 func (repo *PostgresRepository) GetBalanceByUserID(userID int) (*model.Balance, error) {
-	var balance = &model.Balance{}
+	var balance = &model.Balance{
+		User: model.User{ID: &userID},
+	}
 
 	query := `
-		SELECT id, user_id, balance, spent_all_time
+		SELECT id, balance, spent_all_time
 		FROM balance
 		WHERE user_id=$1;
 	`
 
 	err := repo.Conn.QueryRow(query, userID).Scan(
 		&balance.ID,
-		&balance.User.ID,
 		&balance.Balance,
 		&balance.SpentAllTime,
 	)
