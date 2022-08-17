@@ -15,7 +15,7 @@ var (
 
 type Order interface {
 	CreateOrder(order *model.Order) error
-	GetUploadedOrdersForUser(order *model.Order) ([]model.Order, error)
+	GetUploadedOrdersForUser(UserID int) ([]model.Order, error)
 	UpdateOrderStatus(order model.Order) error
 }
 
@@ -64,8 +64,8 @@ func (s OrderService) CreateOrder(order *model.Order) error {
 	return nil
 }
 
-func (s OrderService) GetUploadedOrdersForUser(order *model.Order) ([]model.Order, error) {
-	orders, err := s.repo.GetOrdersByUserID(*order.User.ID)
+func (s OrderService) GetUploadedOrdersForUser(UserID int) ([]model.Order, error) {
+	orders, err := s.repo.GetOrdersByUserID(UserID)
 	log.Info("found orders for current user: ", orders)
 	if err != nil {
 		return nil, err

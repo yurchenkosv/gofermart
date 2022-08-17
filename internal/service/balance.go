@@ -6,7 +6,7 @@ import (
 )
 
 type Balance interface {
-	GetCurrentUserBalance(balance model.Balance) (*model.Balance, error)
+	GetCurrentUserBalance(UserID int) (*model.Balance, error)
 }
 
 type BalanceService struct {
@@ -17,6 +17,6 @@ func NewBalance(repo dao.Repository) Balance {
 	return BalanceService{repo: repo}
 }
 
-func (b BalanceService) GetCurrentUserBalance(balance model.Balance) (*model.Balance, error) {
-	return b.repo.GetBalanceByUserID(*balance.User.ID)
+func (b BalanceService) GetCurrentUserBalance(UserID int) (*model.Balance, error) {
+	return b.repo.GetBalanceByUserID(UserID)
 }

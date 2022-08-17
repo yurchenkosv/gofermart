@@ -12,9 +12,16 @@ import (
 	"time"
 )
 
-func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
-	cfg := GetConfigFromContext(request.Context())
-	repo := cfg.Repo
+type OrdersHanlder struct {
+	orderService service.Order
+}
+
+func NewOrderHandler(orderService *service.Order) OrdersHanlder {
+	return OrdersHanlder{orderService: *orderService}
+
+}
+
+func (h OrdersHanlder) HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
 
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
@@ -33,11 +40,9 @@ func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
 		UploadTime: time.Now(),
 	}
 
-	orderService := service.NewOrderService(repo)
-
 	log.Infof("creating order with number %s, by user %d", orderNum, userID)
 
-	err = orderService.CreateOrder(&order)
+	err = h.orderService.CreateOrder(&order)
 	if err != nil {
 		switch err.(type) {
 		case *errors.OrderAlreadyAcceptedDifferentUserError:
@@ -61,18 +66,10 @@ func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
 	writer.WriteHeader(http.StatusAccepted)
 }
 
-func HandleGetOrders(writer http.ResponseWriter, request *http.Request) {
+func (h OrdersHanlder) HandleGetOrders(writer http.ResponseWriter, request *http.Request) {
 	userID := GetUserIDFromToken(request.Context())
-	cfg := GetConfigFromContext(request.Context())
-	repo := cfg.Repo
-	order := model.Order{
-		User: &model.User{
-			ID: &userID,
-		},
-	}
 	log.Infof("getting all orders with user %d", userID)
-	orderSerivice := service.NewOrderService(repo)
-	orders, err := orderSerivice.GetUploadedOrdersForUser(&order)
+	orders, err := h.orderService.GetUploadedOrdersForUser(userID)
 	if err != nil {
 		switch err.(type) {
 		case *errors.NoOrdersError:

@@ -10,26 +10,24 @@ import (
 	"net/http"
 )
 
-func HandleUserRegistration(writer http.ResponseWriter, request *http.Request) {
-	var user model.User
+type AuthHandler struct {
+	authService service.Auth
+}
 
-	data, err := io.ReadAll(request.Body)
+func NewAuthHanler(authService *service.Auth) AuthHandler {
+	return AuthHandler{
+		authService: *authService,
+	}
+}
 
+func (h AuthHandler) HandleUserRegistration(writer http.ResponseWriter, request *http.Request) {
+	user, err := h.parseForUser(request)
 	if err != nil {
 		log.Error(err)
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	err = json.Unmarshal(data, &user)
-	if err != nil {
-		log.Error(err)
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	cfg := GetConfigFromContext(request.Context())
-	auth := service.NewAuthService(cfg.Repo)
-
-	updatedUser, err := auth.RegisterUser(&user)
+	updatedUser, err := h.authService.RegisterUser(user)
 	if err != nil {
 		switch e := err.(type) {
 		case *errors.UserAlreadyExistsError:
@@ -46,27 +44,14 @@ func HandleUserRegistration(writer http.ResponseWriter, request *http.Request) {
 	writer.WriteHeader(http.StatusOK)
 }
 
-func HandleUserLogin(writer http.ResponseWriter, request *http.Request) {
-	var user model.User
-
-	data, err := io.ReadAll(request.Body)
+func (h AuthHandler) HanldeUserLogin(writer http.ResponseWriter, request *http.Request) {
+	user, err := h.parseForUser(request)
 	if err != nil {
 		log.Error(err)
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	err = json.Unmarshal(data, &user)
-	if err != nil {
-		log.Error(err)
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	cfg := GetConfigFromContext(request.Context())
-	auth := service.NewAuthService(cfg.Repo)
-
-	updatedUser, err := auth.AuthenticateUser(&user)
+	updatedUser, err := h.authService.AuthenticateUser(user)
 	if err != nil {
 		switch e := err.(type) {
 
@@ -82,4 +67,18 @@ func HandleUserLogin(writer http.ResponseWriter, request *http.Request) {
 	}
 	writer = SetToken(writer, request, *updatedUser)
 	writer.WriteHeader(http.StatusOK)
+}
+
+func (h AuthHandler) parseForUser(request *http.Request) (*model.User, error) {
+	var user model.User
+
+	data, err := io.ReadAll(request.Body)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, &user)
+	if err != nil {
+		log.Error(err)
+	}
+	return &user, nil
 }

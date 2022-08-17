@@ -7,9 +7,20 @@ import (
 	"github.com/yurchenkosv/gofermart/internal/config"
 	"github.com/yurchenkosv/gofermart/internal/handlers"
 	"github.com/yurchenkosv/gofermart/internal/middlewares"
+	"github.com/yurchenkosv/gofermart/internal/service"
 )
 
 func NewRouter(cfg *config.ServerConfig) chi.Router {
+	var (
+		authService     = service.NewAuthService(cfg.Repo)
+		orderService    = service.NewOrderService(cfg.Repo)
+		withdrawService = service.NewWithdrawService(cfg.Repo)
+		balanceService  = service.NewBalance(cfg.Repo)
+
+		authHandler    = handlers.NewAuthHanler(&authService)
+		orderHandler   = handlers.NewOrderHandler(&orderService)
+		balanceHandler = handlers.NewBalanceHandler(&balanceService, &withdrawService)
+	)
 	router := chi.NewRouter()
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Logger)
@@ -20,22 +31,22 @@ func NewRouter(cfg *config.ServerConfig) chi.Router {
 	router.Route("/api/user", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(middlewares.AllowContentType("application/json"))
-			r.Post("/register", handlers.HandleUserRegistration)
-			r.Post("/login", handlers.HandleUserLogin)
+			r.Post("/register", authHandler.HandleUserRegistration)
+			r.Post("/login", authHandler.HanldeUserLogin)
 		})
 		r.Group(func(r chi.Router) {
 			r.Use(jwtauth.Verifier(cfg.TokenAuth))
 			r.Use(jwtauth.Authenticator)
 			r.Group(func(r chi.Router) {
 				r.Use(middlewares.AllowContentType("text/plain"))
-				r.Post("/orders", handlers.HandleCreateOrder)
+				r.Post("/orders", orderHandler.HandleCreateOrder)
 			})
 			r.Use(middlewares.AllowContentType("application/json"))
-			r.Get("/orders", handlers.HandleGetOrders)
-			r.Get("/withdrawals", handlers.HandleGetBalanceWithdraws)
+			r.Get("/orders", orderHandler.HandleGetOrders)
+			r.Get("/withdrawals", balanceHandler.HandleGetBalanceWithdraws)
 			r.Route("/balance", func(r chi.Router) {
-				r.Get("/", handlers.HandleGetBalance)
-				r.Post("/withdraw", handlers.HandleBalanceWithdraw)
+				r.Get("/", balanceHandler.HandleGetBalance)
+				r.Post("/withdraw", balanceHandler.HandleBalanceWithdraw)
 			})
 		})
 	})

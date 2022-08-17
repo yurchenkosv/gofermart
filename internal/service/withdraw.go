@@ -10,7 +10,7 @@ import (
 )
 
 type Withdraw interface {
-	GetWithdrawalsForCurrentUser(withdraw model.Withdraw) ([]*model.Withdraw, error)
+	GetWithdrawalsForCurrentUser(UserID int) ([]*model.Withdraw, error)
 	ProcessWithdraw(withdraw model.Withdraw) error
 }
 
@@ -22,8 +22,8 @@ func NewWithdrawService(repo dao.Repository) Withdraw {
 	return WithdrawService{repo: repo}
 }
 
-func (s WithdrawService) GetWithdrawalsForCurrentUser(withdraw model.Withdraw) ([]*model.Withdraw, error) {
-	withdrawals, err := s.repo.GetWithdrawalsByUserID(*withdraw.User.ID)
+func (s WithdrawService) GetWithdrawalsForCurrentUser(UserID int) ([]*model.Withdraw, error) {
+	withdrawals, err := s.repo.GetWithdrawalsByUserID(UserID)
 	if err != nil {
 		return nil, err
 	}

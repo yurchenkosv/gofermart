@@ -42,7 +42,7 @@ func (repo *PostgresRepository) Migrate(path string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := m.Up(); err != nil && errors2.Is(err, migrate.ErrNoChange) {
+	if err := m.Up(); err != nil && !errors2.Is(err, migrate.ErrNoChange) {
 		log.Fatal(err)
 	}
 
@@ -228,7 +228,7 @@ func (repo *PostgresRepository) GetUser(user *model.User) (*model.User, error) {
 	err := repo.Conn.
 		QueryRow(query, user.Login, user.Password).
 		Scan(&userID)
-	if err != nil {
+	if err != nil && !errors2.Is(err, sql.ErrNoRows) {
 		log.Error(err)
 		return user, err
 	}
