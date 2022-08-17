@@ -130,7 +130,9 @@ func (repo *PostgresRepository) GetOrdersByUserID(userID int) ([]model.Order, er
 	}
 
 	for result.Next() {
-		order := model.Order{}
+		order := model.Order{
+			User: &model.User{ID: &userID},
+		}
 		err = result.Scan(
 			&order.ID,
 			&order.Number,

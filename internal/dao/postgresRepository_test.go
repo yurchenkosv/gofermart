@@ -47,7 +47,7 @@ func initContainers(t *testing.T, ctx context.Context) testcontainers.Container 
 
 func TestNewPGRepo(t *testing.T) {
 	type args struct {
-		dbURI string
+		DBURI string
 	}
 	tests := []struct {
 		name   string
@@ -71,8 +71,8 @@ func TestNewPGRepo(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			tt.args.dbURI = fmt.Sprintf("postgresql://postgres:postgres@%s/gofermart?sslmode=disable", endpoint)
-			repo := NewPGRepo(tt.args.dbURI)
+			tt.args.DBURI = fmt.Sprintf("postgresql://postgres:postgres@%s/gofermart?sslmode=disable", endpoint)
+			repo := NewPGRepo(tt.args.DBURI)
 			assert.IsType(t, tt.want, repo)
 		})
 	}
@@ -213,7 +213,7 @@ func Test_getOrdersByUserID(t *testing.T) {
 			},
 			want: []model.Order{
 				{
-					ID:         nil,
+					ID:         getPointerFromInt(1),
 					User:       &model.User{ID: getPointerFromInt(1)},
 					Number:     "2377225624",
 					Accrual:    getPointerFromFloat32(float32(200)),
@@ -248,28 +248,55 @@ func Test_getOrdersByUserID(t *testing.T) {
 
 func TestPostgresRepository_GetBalanceByUserID(t *testing.T) {
 	type fields struct {
-		Conn  *sqlx.DB
-		DbURI string
+		DBURI string
 	}
 	type args struct {
 		userID int
+		repo   *PostgresRepository
+		qry    string
 	}
 	tests := []struct {
 		name    string
 		fields  fields
 		args    args
+		before  func(t *testing.T, ctx context.Context) testcontainers.Container
 		want    *model.Balance
 		wantErr assert.ErrorAssertionFunc
 	}{
-		// TODO: Add test cases.
+		{
+			name:   "should successfully get balance by user id",
+			before: initContainers,
+			args: args{
+				qry: `
+					INSERT INTO balance(id, user_id, balance, spent_all_time) 
+					VALUES ( 1, 1, 200, 300); 
+				`,
+				userID: 1,
+			},
+			want: &model.Balance{
+				ID:           1,
+				User:         model.User{ID: getPointerFromInt(1)},
+				Balance:      200,
+				SpentAllTime: 300,
+			},
+			wantErr: assert.NoError,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := &PostgresRepository{
-				Conn:  tt.fields.Conn,
-				DBURI: tt.fields.DbURI,
+			ctx := context.Background()
+			postgres := tt.before(t, ctx)
+			defer postgres.Terminate(ctx)
+			endpoint, err := postgres.Endpoint(ctx, "")
+			if err != nil {
+				t.Error(err)
 			}
-			got, err := repo.GetBalanceByUserID(tt.args.userID)
+			tt.args.repo = NewPGRepo(fmt.Sprintf("postgresql://postgres:postgres@%s/gofermart?sslmode=disable", endpoint))
+			tt.args.repo.Migrate("file://../../db/migrations")
+			conn, _ := sqlx.Connect("postgres", tt.args.repo.DBURI)
+			conn.MustExec(tt.args.qry)
+
+			got, err := tt.args.repo.GetBalanceByUserID(tt.args.userID)
 			if !tt.wantErr(t, err, fmt.Sprintf("GetBalanceByUserID(%v)", tt.args.userID)) {
 				return
 			}
@@ -280,11 +307,12 @@ func TestPostgresRepository_GetBalanceByUserID(t *testing.T) {
 
 func TestPostgresRepository_GetOrderByNumber(t *testing.T) {
 	type fields struct {
-		Conn  *sqlx.DB
-		DbURI string
+		DBURI string
 	}
 	type args struct {
 		orderNumber string
+		repo        *PostgresRepository
+		qry         string
 	}
 	tests := []struct {
 		name    string
@@ -297,11 +325,12 @@ func TestPostgresRepository_GetOrderByNumber(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := &PostgresRepository{
-				Conn:  tt.fields.Conn,
-				DBURI: tt.fields.DbURI,
-			}
-			got, err := repo.GetOrderByNumber(tt.args.orderNumber)
+			tt.args.repo = NewPGRepo(tt.fields.DBURI)
+			tt.args.repo.Migrate("file://../../db/migrations")
+			conn, _ := sqlx.Connect("postgres", tt.args.repo.DBURI)
+			conn.MustExec(tt.args.qry)
+
+			got, err := tt.args.repo.GetOrderByNumber(tt.args.orderNumber)
 			if !tt.wantErr(t, err, fmt.Sprintf("GetOrderByNumber(%v)", tt.args.orderNumber)) {
 				return
 			}
@@ -313,7 +342,7 @@ func TestPostgresRepository_GetOrderByNumber(t *testing.T) {
 func TestPostgresRepository_GetOrdersByUserID(t *testing.T) {
 	type fields struct {
 		Conn  *sqlx.DB
-		DbURI string
+		DBURI string
 	}
 	type args struct {
 		userID int
@@ -331,7 +360,7 @@ func TestPostgresRepository_GetOrdersByUserID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DBURI: tt.fields.DbURI,
+				DBURI: tt.fields.DBURI,
 			}
 			got, err := repo.GetOrdersByUserID(tt.args.userID)
 			if !tt.wantErr(t, err, fmt.Sprintf("GetOrdersByUserID(%v)", tt.args.userID)) {
@@ -345,7 +374,7 @@ func TestPostgresRepository_GetOrdersByUserID(t *testing.T) {
 func TestPostgresRepository_GetOrdersForStatusUpdate(t *testing.T) {
 	type fields struct {
 		Conn  *sqlx.DB
-		DbURI string
+		DBURI string
 	}
 	tests := []struct {
 		name    string
@@ -359,7 +388,7 @@ func TestPostgresRepository_GetOrdersForStatusUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DBURI: tt.fields.DbURI,
+				DBURI: tt.fields.DBURI,
 			}
 			got, err := repo.GetOrdersForStatusUpdate()
 			if !tt.wantErr(t, err, fmt.Sprintf("GetOrdersForStatusUpdate()")) {
@@ -373,7 +402,7 @@ func TestPostgresRepository_GetOrdersForStatusUpdate(t *testing.T) {
 func TestPostgresRepository_GetUser(t *testing.T) {
 	type fields struct {
 		Conn  *sqlx.DB
-		DbURI string
+		DBURI string
 	}
 	type args struct {
 		user *model.User
@@ -391,7 +420,7 @@ func TestPostgresRepository_GetUser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DBURI: tt.fields.DbURI,
+				DBURI: tt.fields.DBURI,
 			}
 			got, err := repo.GetUser(tt.args.user)
 			if !tt.wantErr(t, err, fmt.Sprintf("GetUser(%v)", tt.args.user)) {
@@ -405,7 +434,7 @@ func TestPostgresRepository_GetUser(t *testing.T) {
 func TestPostgresRepository_GetWithdrawalsByUserID(t *testing.T) {
 	type fields struct {
 		Conn  *sqlx.DB
-		DbURI string
+		DBURI string
 	}
 	type args struct {
 		userID int
@@ -423,7 +452,7 @@ func TestPostgresRepository_GetWithdrawalsByUserID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DBURI: tt.fields.DbURI,
+				DBURI: tt.fields.DBURI,
 			}
 			got, err := repo.GetWithdrawalsByUserID(tt.args.userID)
 			if !tt.wantErr(t, err, fmt.Sprintf("GetWithdrawalsByUserID(%v)", tt.args.userID)) {
@@ -437,7 +466,7 @@ func TestPostgresRepository_GetWithdrawalsByUserID(t *testing.T) {
 func TestPostgresRepository_Migrate(t *testing.T) {
 	type fields struct {
 		Conn  *sqlx.DB
-		DbURI string
+		DBURI string
 	}
 	type args struct {
 		path string
@@ -453,7 +482,7 @@ func TestPostgresRepository_Migrate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DBURI: tt.fields.DbURI,
+				DBURI: tt.fields.DBURI,
 			}
 			repo.Migrate(tt.args.path)
 		})
@@ -463,7 +492,7 @@ func TestPostgresRepository_Migrate(t *testing.T) {
 func TestPostgresRepository_SaveBalance(t *testing.T) {
 	type fields struct {
 		Conn  *sqlx.DB
-		DbURI string
+		DBURI string
 	}
 	type args struct {
 		balance *model.Balance
@@ -480,7 +509,7 @@ func TestPostgresRepository_SaveBalance(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DBURI: tt.fields.DbURI,
+				DBURI: tt.fields.DBURI,
 			}
 			tt.wantErr(t, repo.SaveBalance(tt.args.balance), fmt.Sprintf("SaveBalance(%v)", tt.args.balance))
 		})
@@ -490,7 +519,7 @@ func TestPostgresRepository_SaveBalance(t *testing.T) {
 func TestPostgresRepository_SaveOrder(t *testing.T) {
 	type fields struct {
 		Conn  *sqlx.DB
-		DbURI string
+		DBURI string
 	}
 	type args struct {
 		order *model.Order
@@ -507,7 +536,7 @@ func TestPostgresRepository_SaveOrder(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DBURI: tt.fields.DbURI,
+				DBURI: tt.fields.DBURI,
 			}
 			tt.wantErr(t, repo.SaveOrder(tt.args.order), fmt.Sprintf("SaveOrder(%v)", tt.args.order))
 		})
@@ -517,7 +546,7 @@ func TestPostgresRepository_SaveOrder(t *testing.T) {
 func TestPostgresRepository_SaveUser(t *testing.T) {
 	type fields struct {
 		Conn  *sqlx.DB
-		DbURI string
+		DBURI string
 	}
 	type args struct {
 		user *model.User
@@ -534,7 +563,7 @@ func TestPostgresRepository_SaveUser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DBURI: tt.fields.DbURI,
+				DBURI: tt.fields.DBURI,
 			}
 			tt.wantErr(t, repo.SaveUser(tt.args.user), fmt.Sprintf("SaveUser(%v)", tt.args.user))
 		})
@@ -544,7 +573,7 @@ func TestPostgresRepository_SaveUser(t *testing.T) {
 func TestPostgresRepository_SaveWithdraw(t *testing.T) {
 	type fields struct {
 		Conn  *sqlx.DB
-		DbURI string
+		DBURI string
 	}
 	type args struct {
 		withdraw *model.Withdraw
@@ -561,7 +590,7 @@ func TestPostgresRepository_SaveWithdraw(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DBURI: tt.fields.DbURI,
+				DBURI: tt.fields.DBURI,
 			}
 			tt.wantErr(t, repo.SaveWithdraw(tt.args.withdraw), fmt.Sprintf("SaveWithdraw(%v)", tt.args.withdraw))
 		})
@@ -571,7 +600,7 @@ func TestPostgresRepository_SaveWithdraw(t *testing.T) {
 func TestPostgresRepository_Shutdown(t *testing.T) {
 	type fields struct {
 		Conn  *sqlx.DB
-		DbURI string
+		DBURI string
 	}
 	tests := []struct {
 		name   string
@@ -583,7 +612,7 @@ func TestPostgresRepository_Shutdown(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DBURI: tt.fields.DbURI,
+				DBURI: tt.fields.DBURI,
 			}
 			repo.Shutdown()
 		})
