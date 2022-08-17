@@ -13,10 +13,8 @@ import (
 )
 
 func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
-	var order model.Order
 	cfg := GetConfigFromContext(request.Context())
 	repo := cfg.Repo
-	now := time.Now()
 
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
@@ -25,13 +23,16 @@ func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	orderNum := strings.TrimSpace(string(body))
-	order.Number = orderNum
-
 	userID := GetUserIDFromToken(request.Context())
-	order.Status = model.OrderStatusNew
-	order.User = &model.User{ID: &userID}
-	order.UploadTime = now
+	orderNum := strings.TrimSpace(string(body))
+
+	order := model.Order{
+		User:       &model.User{ID: &userID},
+		Number:     orderNum,
+		Status:     model.OrderStatusNew,
+		UploadTime: time.Now(),
+	}
+
 	orderService := service.NewOrderService(repo)
 
 	log.Infof("creating order with number %s, by user %d", orderNum, userID)

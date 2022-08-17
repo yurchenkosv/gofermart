@@ -1,6 +1,5 @@
 package dao
 
-//goland:noinspection GoUnsortedImport
 import (
 	"database/sql"
 	errors2 "errors"
@@ -15,7 +14,7 @@ import (
 
 type PostgresRepository struct {
 	Conn  *sqlx.DB
-	DbURI string
+	DBURI string
 }
 
 func NewPGRepo(dbURI string) *PostgresRepository {
@@ -27,7 +26,7 @@ func NewPGRepo(dbURI string) *PostgresRepository {
 	conn.SetMaxIdleConns(5)
 	return &PostgresRepository{
 		Conn:  conn,
-		DbURI: dbURI,
+		DBURI: dbURI,
 	}
 }
 
@@ -39,11 +38,11 @@ func (repo PostgresRepository) Shutdown() {
 func (repo *PostgresRepository) Migrate(path string) {
 	m, err := migrate.New(
 		path,
-		repo.DbURI)
+		repo.DBURI)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && errors2.Is(err, migrate.ErrNoChange) {
 		log.Fatal(err)
 	}
 
@@ -122,6 +121,13 @@ func (repo *PostgresRepository) GetOrdersByUserID(userID int) ([]model.Order, er
 		return nil, err
 	}
 	defer result.Close()
+
+	err = result.Err()
+
+	if err != nil && !errors2.Is(err, sql.ErrNoRows) {
+		log.Error(err)
+		return nil, err
+	}
 
 	for result.Next() {
 		order := model.Order{}

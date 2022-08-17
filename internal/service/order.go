@@ -48,7 +48,10 @@ func (s OrderService) CreateOrder(order *model.Order) error {
 		}
 
 	}
-	orderNum, _ := strconv.Atoi(order.Number)
+	orderNum, err := strconv.Atoi(order.Number)
+	if err != nil {
+		return err
+	}
 	if !checkOrderFormat(orderNum) {
 		return &errors.OrderFormatError{
 			OrderNumber: order.Number,

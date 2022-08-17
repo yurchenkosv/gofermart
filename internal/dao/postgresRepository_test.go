@@ -119,7 +119,7 @@ func Test_getCurrentUserBalance(t *testing.T) {
 			}
 			tt.args.repo = NewPGRepo(fmt.Sprintf("postgresql://postgres:postgres@%s/gofermart?sslmode=disable", endpoint))
 			tt.args.repo.Migrate("file://../../db/migrations")
-			conn, _ := sqlx.Connect("postgres", tt.args.repo.DbURI)
+			conn, _ := sqlx.Connect("postgres", tt.args.repo.DBURI)
 			conn.MustExec(tt.args.qry)
 
 			got, err := tt.args.repo.GetBalanceByUserID(*tt.args.b.User.ID)
@@ -175,7 +175,7 @@ func Test_getOrderByNumber(t *testing.T) {
 			}
 			tt.args.repo = NewPGRepo(fmt.Sprintf("postgresql://postgres:postgres@%s/gofermart?sslmode=disable", endpoint))
 			tt.args.repo.Migrate("file://../../db/migrations")
-			conn, _ := sqlx.Connect("postgres", tt.args.repo.DbURI)
+			conn, _ := sqlx.Connect("postgres", tt.args.repo.DBURI)
 			conn.MustExec(tt.args.qry)
 
 			got, err := tt.args.repo.GetOrderByNumber(tt.args.orderNum)
@@ -234,7 +234,7 @@ func Test_getOrdersByUserID(t *testing.T) {
 			}
 			tt.args.repo = NewPGRepo(fmt.Sprintf("postgresql://postgres:postgres@%s/gofermart?sslmode=disable", endpoint))
 			tt.args.repo.Migrate("file://../../db/migrations")
-			conn, _ := sqlx.Connect("postgres", tt.args.repo.DbURI)
+			conn, _ := sqlx.Connect("postgres", tt.args.repo.DBURI)
 			conn.MustExec(tt.args.qry)
 
 			got, err := tt.args.repo.GetOrdersByUserID(tt.args.userID)
@@ -267,7 +267,7 @@ func TestPostgresRepository_GetBalanceByUserID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DbURI: tt.fields.DbURI,
+				DBURI: tt.fields.DbURI,
 			}
 			got, err := repo.GetBalanceByUserID(tt.args.userID)
 			if !tt.wantErr(t, err, fmt.Sprintf("GetBalanceByUserID(%v)", tt.args.userID)) {
@@ -299,7 +299,7 @@ func TestPostgresRepository_GetOrderByNumber(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DbURI: tt.fields.DbURI,
+				DBURI: tt.fields.DbURI,
 			}
 			got, err := repo.GetOrderByNumber(tt.args.orderNumber)
 			if !tt.wantErr(t, err, fmt.Sprintf("GetOrderByNumber(%v)", tt.args.orderNumber)) {
@@ -331,7 +331,7 @@ func TestPostgresRepository_GetOrdersByUserID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DbURI: tt.fields.DbURI,
+				DBURI: tt.fields.DbURI,
 			}
 			got, err := repo.GetOrdersByUserID(tt.args.userID)
 			if !tt.wantErr(t, err, fmt.Sprintf("GetOrdersByUserID(%v)", tt.args.userID)) {
@@ -359,7 +359,7 @@ func TestPostgresRepository_GetOrdersForStatusUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DbURI: tt.fields.DbURI,
+				DBURI: tt.fields.DbURI,
 			}
 			got, err := repo.GetOrdersForStatusUpdate()
 			if !tt.wantErr(t, err, fmt.Sprintf("GetOrdersForStatusUpdate()")) {
@@ -391,7 +391,7 @@ func TestPostgresRepository_GetUser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DbURI: tt.fields.DbURI,
+				DBURI: tt.fields.DbURI,
 			}
 			got, err := repo.GetUser(tt.args.user)
 			if !tt.wantErr(t, err, fmt.Sprintf("GetUser(%v)", tt.args.user)) {
@@ -423,7 +423,7 @@ func TestPostgresRepository_GetWithdrawalsByUserID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DbURI: tt.fields.DbURI,
+				DBURI: tt.fields.DbURI,
 			}
 			got, err := repo.GetWithdrawalsByUserID(tt.args.userID)
 			if !tt.wantErr(t, err, fmt.Sprintf("GetWithdrawalsByUserID(%v)", tt.args.userID)) {
@@ -453,7 +453,7 @@ func TestPostgresRepository_Migrate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DbURI: tt.fields.DbURI,
+				DBURI: tt.fields.DbURI,
 			}
 			repo.Migrate(tt.args.path)
 		})
@@ -480,7 +480,7 @@ func TestPostgresRepository_SaveBalance(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DbURI: tt.fields.DbURI,
+				DBURI: tt.fields.DbURI,
 			}
 			tt.wantErr(t, repo.SaveBalance(tt.args.balance), fmt.Sprintf("SaveBalance(%v)", tt.args.balance))
 		})
@@ -507,7 +507,7 @@ func TestPostgresRepository_SaveOrder(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DbURI: tt.fields.DbURI,
+				DBURI: tt.fields.DbURI,
 			}
 			tt.wantErr(t, repo.SaveOrder(tt.args.order), fmt.Sprintf("SaveOrder(%v)", tt.args.order))
 		})
@@ -534,7 +534,7 @@ func TestPostgresRepository_SaveUser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DbURI: tt.fields.DbURI,
+				DBURI: tt.fields.DbURI,
 			}
 			tt.wantErr(t, repo.SaveUser(tt.args.user), fmt.Sprintf("SaveUser(%v)", tt.args.user))
 		})
@@ -561,7 +561,7 @@ func TestPostgresRepository_SaveWithdraw(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DbURI: tt.fields.DbURI,
+				DBURI: tt.fields.DbURI,
 			}
 			tt.wantErr(t, repo.SaveWithdraw(tt.args.withdraw), fmt.Sprintf("SaveWithdraw(%v)", tt.args.withdraw))
 		})
@@ -583,7 +583,7 @@ func TestPostgresRepository_Shutdown(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := PostgresRepository{
 				Conn:  tt.fields.Conn,
-				DbURI: tt.fields.DbURI,
+				DBURI: tt.fields.DbURI,
 			}
 			repo.Shutdown()
 		})
