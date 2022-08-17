@@ -238,6 +238,9 @@ func Test_getOrdersByUserID(t *testing.T) {
 			conn.MustExec(tt.args.qry)
 
 			got, err := tt.args.repo.GetOrdersByUserID(tt.args.userID)
+			if err != nil {
+				t.Error(err)
+			}
 
 			//Не совсем понятно как сделать дату идентичной той, которая вытаскивается с БД (
 			tt.want[0].UploadTime = got[0].UploadTime
@@ -391,7 +394,7 @@ func TestPostgresRepository_GetOrdersForStatusUpdate(t *testing.T) {
 				DBURI: tt.fields.DBURI,
 			}
 			got, err := repo.GetOrdersForStatusUpdate()
-			if !tt.wantErr(t, err, fmt.Sprintf("GetOrdersForStatusUpdate()")) {
+			if !tt.wantErr(t, err, "GetOrdersForStatusUpdate()") {
 				return
 			}
 			assert.Equalf(t, tt.want, got, "GetOrdersForStatusUpdate()")
