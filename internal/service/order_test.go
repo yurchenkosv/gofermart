@@ -28,11 +28,10 @@ func TestOrderService_CreateOrder(t *testing.T) {
 		{
 			name: "should success create order",
 			prepare: func(f *fields, order *model.Order) {
-				id := 1
-				order.User.ID = &id
+				order.User.ID = GetIntPointer(1)
 				gomock.InOrder(
 					f.repo.EXPECT().GetOrderByNumber(order.Number).Return(order, nil),
-					f.repo.EXPECT().Save(order).Return(nil),
+					f.repo.EXPECT().SaveOrder(order).Return(nil),
 				)
 			},
 			args: args{order: &model.Order{
@@ -105,11 +104,11 @@ func TestOrderService_GetUploadedOrdersForUser(t *testing.T) {
 		repo *mock_dao.MockRepository
 	}
 	type args struct {
-		order *model.Order
+		id int
 	}
 	tests := []struct {
 		name        string
-		prepare     func(f *fields, order *model.Order)
+		prepare     func(f *fields)
 		args        args
 		want        []model.Order
 		wantErr     assert.ErrorAssertionFunc
@@ -117,15 +116,12 @@ func TestOrderService_GetUploadedOrdersForUser(t *testing.T) {
 	}{
 		{
 			name: "should success return orders for current user",
-			prepare: func(f *fields, order *model.Order) {
-				id := 1
-				order.ID = &id
-				order.User.ID = &id
+			prepare: func(f *fields) {
 				gomock.InOrder(
-					f.repo.EXPECT().GetOrdersForUser(*order).Return([]model.Order{
+					f.repo.EXPECT().GetOrdersByUserID(1).Return([]model.Order{
 						{
-							ID:         order.ID,
-							User:       order.User,
+							ID:         GetIntPointer(1),
+							User:       &model.User{ID: GetIntPointer(1)},
 							Number:     "2377225624",
 							Accrual:    nil,
 							Status:     "NEW",
@@ -134,7 +130,7 @@ func TestOrderService_GetUploadedOrdersForUser(t *testing.T) {
 					}, nil),
 				)
 			},
-			args: args{order: &model.Order{User: &model.User{ID: new(int)}}},
+			args: args{id: 1},
 			want: []model.Order{
 				{
 					ID:         GetIntPointer(1),
@@ -150,14 +146,12 @@ func TestOrderService_GetUploadedOrdersForUser(t *testing.T) {
 		},
 		{
 			name: "should return NoOrdersError",
-			prepare: func(f *fields, order *model.Order) {
-				id := 1
-				order.User.ID = &id
+			prepare: func(f *fields) {
 				gomock.InOrder(
-					f.repo.EXPECT().GetOrdersForUser(*order).Return([]model.Order{}, nil),
+					f.repo.EXPECT().GetOrdersByUserID(1).Return([]model.Order{}, nil),
 				)
 			},
-			args:        args{order: &model.Order{User: &model.User{ID: new(int)}}},
+			args:        args{id: 1},
 			want:        nil,
 			wantErr:     assert.Error,
 			wantErrType: &errors.NoOrdersError{},
@@ -167,15 +161,15 @@ func TestOrderService_GetUploadedOrdersForUser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			f := fields{repo: mock_dao.NewMockRepository(ctrl)}
-			tt.prepare(&f, tt.args.order)
+			tt.prepare(&f)
 			s := OrderService{
 				repo: f.repo,
 			}
-			got, err := s.GetUploadedOrdersForUser(tt.args.order)
-			if !tt.wantErr(t, err, fmt.Sprintf("GetUploadedOrdersForUser(%v)", tt.args.order)) {
+			got, err := s.GetUploadedOrdersForUser(tt.args.id)
+			if !tt.wantErr(t, err, fmt.Sprintf("GetUploadedOrdersForUser(%v)", tt.args.id)) {
 				return
 			}
-			assert.Equalf(t, tt.want, got, "GetUploadedOrdersForUser(%v)", tt.args.order)
+			assert.Equalf(t, tt.want, got, "GetUploadedOrdersForUser(%v)", tt.args.id)
 			assert.IsType(t, tt.wantErrType, err)
 		})
 	}
@@ -209,7 +203,7 @@ func TestOrderService_UpdateOrderStatus(t *testing.T) {
 				}
 				gomock.InOrder(
 					f.repo.EXPECT().GetOrderByNumber("2377225624").Return(orderInDB, nil),
-					f.repo.EXPECT().Save(orderInDB).Return(nil),
+					f.repo.EXPECT().SaveOrder(orderInDB).Return(nil),
 				)
 			},
 			args: args{order: model.Order{

@@ -12,7 +12,7 @@ import (
 )
 
 func TestGetWithdrawalsForCurrentUser(t *testing.T) {
-	type mockBehavior func(s *mock_dao.MockRepository, withdraw model.Withdraw, id int)
+	type mockBehavior func(s *mock_dao.MockRepository, id int)
 	type args struct {
 		withdraw model.Withdraw
 	}
@@ -25,8 +25,8 @@ func TestGetWithdrawalsForCurrentUser(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			behavior: func(s *mock_dao.MockRepository, withdraw model.Withdraw, id int) {
-				s.EXPECT().GetWithdrawals(withdraw).Return([]*model.Withdraw{
+			behavior: func(s *mock_dao.MockRepository, id int) {
+				s.EXPECT().GetWithdrawalsByUserID(id).Return([]*model.Withdraw{
 					{
 						Order:       "12345",
 						Sum:         500,
@@ -55,8 +55,8 @@ func TestGetWithdrawalsForCurrentUser(t *testing.T) {
 			defer ctrl.Finish()
 			authRepo := mock_dao.NewMockRepository(ctrl)
 			withdrawService := NewWithdrawService(authRepo)
-			tt.behavior(authRepo, tt.args.withdraw, tt.id)
-			got, err := withdrawService.GetWithdrawalsForCurrentUser(tt.args.withdraw)
+			tt.behavior(authRepo, tt.id)
+			got, err := withdrawService.GetWithdrawalsForCurrentUser(tt.id)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("AuthenticateUser() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -84,20 +84,19 @@ func TestWithdrawService_ProcessWithdraw(t *testing.T) {
 		{
 			name: "should success process withdraw",
 			prepare: func(f *fields, withdraw model.Withdraw) {
-				b := model.Balance{User: withdraw.User}
-				f.repo.EXPECT().GetBalance(b).Return(
+				f.repo.EXPECT().GetBalanceByUserID(*withdraw.User.ID).Return(
 					&model.Balance{
-						User:         b.User,
+						User:         model.User{ID: withdraw.User.ID},
 						Balance:      100,
 						SpentAllTime: 100,
 					},
 					nil)
-				f.repo.EXPECT().Save(&model.Balance{
+				f.repo.EXPECT().SaveBalance(&model.Balance{
 					User:         withdraw.User,
 					Balance:      50,
 					SpentAllTime: 150,
 				}).Return(nil)
-				f.repo.EXPECT().Save(&withdraw).Return(nil)
+				f.repo.EXPECT().SaveWithdraw(&withdraw).Return(nil)
 			},
 			wantErr:     assert.NoError,
 			wantErrType: nil,
@@ -127,10 +126,9 @@ func TestWithdrawService_ProcessWithdraw(t *testing.T) {
 		{
 			name: "should return LowBalanceError",
 			prepare: func(f *fields, withdraw model.Withdraw) {
-				b := model.Balance{User: withdraw.User}
-				f.repo.EXPECT().GetBalance(b).Return(
+				f.repo.EXPECT().GetBalanceByUserID(*withdraw.User.ID).Return(
 					&model.Balance{
-						User:         b.User,
+						User:         model.User{ID: withdraw.User.ID},
 						Balance:      100,
 						SpentAllTime: 100,
 					},

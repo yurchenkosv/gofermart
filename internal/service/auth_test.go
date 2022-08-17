@@ -80,7 +80,7 @@ func TestRegisterUser(t *testing.T) {
 			id: 1,
 			behavior: func(s *mock_dao.MockRepository, user *model.User, id int) {
 				s.EXPECT().GetUser(user).Return(user, nil)
-				s.EXPECT().Save(user).Return(nil)
+				s.EXPECT().SaveUser(user).Return(nil)
 				s.EXPECT().GetUser(user).Return(&model.User{
 					ID:       &id,
 					Login:    user.Login,
