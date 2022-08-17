@@ -4,29 +4,29 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/jwtauth/v5"
-	"github.com/yurchenkosv/gofermart/internal/config"
+	"github.com/yurchenkosv/gofermart/internal/dao"
 	"github.com/yurchenkosv/gofermart/internal/handlers"
 	"github.com/yurchenkosv/gofermart/internal/middlewares"
 	"github.com/yurchenkosv/gofermart/internal/service"
 )
 
-func NewRouter(cfg *config.ServerConfig) chi.Router {
+func NewRouter(repo dao.Repository, tokenAuth *jwtauth.JWTAuth) chi.Router {
 	var (
-		authService     = service.NewAuthService(cfg.Repo)
-		orderService    = service.NewOrderService(cfg.Repo)
-		withdrawService = service.NewWithdrawService(cfg.Repo)
-		balanceService  = service.NewBalance(cfg.Repo)
+		authService     = service.NewAuthService(repo)
+		orderService    = service.NewOrderService(repo)
+		withdrawService = service.NewWithdrawService(repo)
+		balanceService  = service.NewBalance(repo)
 
-		authHandler    = handlers.NewAuthHanler(&authService)
+		authHandler    = handlers.NewAuthHanler(&authService, tokenAuth)
 		orderHandler   = handlers.NewOrderHandler(&orderService)
 		balanceHandler = handlers.NewBalanceHandler(&balanceService, &withdrawService)
 	)
+
 	router := chi.NewRouter()
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Logger)
 	router.Use(middleware.RequestID)
 	router.Use(middleware.StripSlashes)
-	router.Use(middlewares.AppendConfigToContext(cfg))
 
 	router.Route("/api/user", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
@@ -35,7 +35,7 @@ func NewRouter(cfg *config.ServerConfig) chi.Router {
 			r.Post("/login", authHandler.HanldeUserLogin)
 		})
 		r.Group(func(r chi.Router) {
-			r.Use(jwtauth.Verifier(cfg.TokenAuth))
+			r.Use(jwtauth.Verifier(tokenAuth))
 			r.Use(jwtauth.Authenticator)
 			r.Group(func(r chi.Router) {
 				r.Use(middlewares.AllowContentType("text/plain"))

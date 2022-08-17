@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/go-chi/jwtauth/v5"
 	"github.com/go-co-op/gocron"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -33,35 +34,39 @@ func main() {
 		log.Error(err)
 	}
 	tokenAuth = jwtauth.New("HS256", []byte(cfg.InitialTokenSecret), nil)
-	cfg.TokenAuth = tokenAuth
-	cfg.Repo = dao.NewPGRepo(cfg.DatabaseURI)
-	cfg.Repo.Migrate("file://db/migrations")
+	repo := dao.NewPGRepo(cfg.DatabaseURI)
+	repo.Migrate("file://db/migrations")
 
 	osSignal := make(chan os.Signal, 1)
 	signal.Notify(osSignal, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
-	sched := gocron.NewScheduler(time.UTC)
-	_, err = sched.EveryRandom(2, 7).
-		Second().
-		Do(controllers.StatusCheckLoop, cfg)
-	if err != nil {
-		log.Fatal("cannot create scheduler for update tasks", err)
-	}
-	sched.StartAsync()
-
-	router := routers.NewRouter(cfg)
+	router := routers.NewRouter(repo, tokenAuth)
 	server := http.Server{
 		Addr:    cfg.RunAddress,
 		Handler: router,
 	}
-
 	go func() {
-		<-osSignal
-		sched.Stop()
-		cfg.Repo.Shutdown()
-		os.Exit(0)
+		if err := server.ListenAndServe(); err != nil {
+			log.Error(err)
+		}
 	}()
 
-	log.Fatal(server.ListenAndServe())
+	sched := gocron.NewScheduler(time.UTC)
+	_, err = sched.EveryRandom(2, 7).
+		Second().
+		Do(controllers.StatusCheckLoop, cfg, repo)
+	if err != nil {
+		log.Fatal("cannot create scheduler for update tasks: ", err)
+	}
+	sched.StartAsync()
+
+	<-osSignal
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	server.Shutdown(ctx)
+	sched.Stop()
+	repo.Shutdown()
+	os.Exit(0)
 
 }

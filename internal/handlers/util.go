@@ -4,28 +4,20 @@ import (
 	"context"
 	"github.com/go-chi/jwtauth/v5"
 	log "github.com/sirupsen/logrus"
-	"github.com/yurchenkosv/gofermart/internal/config"
 	"github.com/yurchenkosv/gofermart/internal/model"
 	"net/http"
 	"time"
 )
 
-func GetConfigFromContext(ctx context.Context) config.ServerConfig {
-	cfg := ctx.Value(model.ConfigKey("config")).(*config.ServerConfig)
-	return *cfg
-}
-
-func SetToken(writer http.ResponseWriter, request *http.Request, user model.User) http.ResponseWriter {
+func SetToken(writer http.ResponseWriter, user model.User, auth *jwtauth.JWTAuth) http.ResponseWriter {
 	claims := map[string]interface{}{
 		"user_id": *user.ID,
 	}
-	cfg := GetConfigFromContext(request.Context())
-	tokenAuth := cfg.TokenAuth
 	currentTime := time.Now()
 
 	jwtauth.SetIssuedAt(claims, currentTime)
 	jwtauth.SetExpiry(claims, currentTime.Add(5*time.Minute))
-	_, token, err := tokenAuth.Encode(claims)
+	_, token, err := auth.Encode(claims)
 
 	if err != nil {
 		log.Error("error setting token for user:", err)

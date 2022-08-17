@@ -14,10 +14,9 @@ import (
 	"strconv"
 )
 
-func UpdateOrderStatusFromAccrualSys(order int, config *config.ServerConfig) {
+func UpdateOrderStatusFromAccrualSys(order int, config *config.ServerConfig, repo dao.Repository) {
 	var (
 		accrualStatus = dto.AccrualStatus{}
-		orderToUpdate = model.Order{}
 	)
 	client := resty.New().
 		SetBaseURL(config.AccrualSystemAddress).
@@ -34,10 +33,14 @@ func UpdateOrderStatusFromAccrualSys(order int, config *config.ServerConfig) {
 		log.Error("error unmarshalling json: ", err)
 		return
 	}
-	orderToUpdate.Status = accrualStatus.Status
-	orderToUpdate.Number = accrualStatus.OrderNum
-	orderToUpdate.Accrual = accrualStatus.Accrual
-	orderService := service.NewOrderService(config.Repo)
+
+	orderToUpdate := model.Order{
+		Number:  accrualStatus.OrderNum,
+		Accrual: accrualStatus.Accrual,
+		Status:  accrualStatus.Status,
+	}
+
+	orderService := service.NewOrderService(repo)
 
 	err = orderService.UpdateOrderStatus(orderToUpdate)
 	if err != nil {
@@ -54,7 +57,7 @@ func UpdateOrderStatusFromAccrualSys(order int, config *config.ServerConfig) {
 	}
 }
 
-func GetOrdersForStatusCheck(repository *dao.PostgresRepository) []*model.Order {
+func GetOrdersForStatusCheck(repository dao.Repository) []*model.Order {
 	orders, err := repository.GetOrdersForStatusUpdate()
 	if err != nil {
 		log.Error("error getting orders", err)
@@ -62,8 +65,8 @@ func GetOrdersForStatusCheck(repository *dao.PostgresRepository) []*model.Order 
 	return orders
 }
 
-func StatusCheckLoop(serverConfig *config.ServerConfig) {
-	orders := GetOrdersForStatusCheck(serverConfig.Repo)
+func StatusCheckLoop(cfg *config.ServerConfig, repo dao.Repository) {
+	orders := GetOrdersForStatusCheck(repo)
 	for i := range orders {
 		orderNum, err := strconv.Atoi(orders[i].Number)
 		if err != nil {
@@ -71,7 +74,7 @@ func StatusCheckLoop(serverConfig *config.ServerConfig) {
 			continue
 		}
 		go func() {
-			UpdateOrderStatusFromAccrualSys(orderNum, serverConfig)
+			UpdateOrderStatusFromAccrualSys(orderNum, cfg, repo)
 		}()
 	}
 }

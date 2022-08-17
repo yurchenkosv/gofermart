@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/go-chi/jwtauth/v5"
 	log "github.com/sirupsen/logrus"
 	"github.com/yurchenkosv/gofermart/internal/errors"
 	"github.com/yurchenkosv/gofermart/internal/model"
@@ -12,11 +13,13 @@ import (
 
 type AuthHandler struct {
 	authService service.Auth
+	jwtAuth     *jwtauth.JWTAuth
 }
 
-func NewAuthHanler(authService *service.Auth) AuthHandler {
+func NewAuthHanler(authService *service.Auth, jwtAuth *jwtauth.JWTAuth) AuthHandler {
 	return AuthHandler{
 		authService: *authService,
+		jwtAuth:     jwtAuth,
 	}
 }
 
@@ -40,7 +43,7 @@ func (h AuthHandler) HandleUserRegistration(writer http.ResponseWriter, request 
 			return
 		}
 	}
-	writer = SetToken(writer, request, *updatedUser)
+	writer = SetToken(writer, *updatedUser, h.jwtAuth)
 	writer.WriteHeader(http.StatusOK)
 }
 
@@ -65,7 +68,7 @@ func (h AuthHandler) HanldeUserLogin(writer http.ResponseWriter, request *http.R
 			return
 		}
 	}
-	writer = SetToken(writer, request, *updatedUser)
+	writer = SetToken(writer, *updatedUser, h.jwtAuth)
 	writer.WriteHeader(http.StatusOK)
 }
 
