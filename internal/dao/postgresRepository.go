@@ -2,6 +2,8 @@ package dao
 
 //goland:noinspection GoUnsortedImport
 import (
+	"database/sql"
+	errors2 "errors"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -91,16 +93,14 @@ func (repo *PostgresRepository) GetBalanceByUserID(userID int) (*model.Balance, 
 		FROM balance
 		WHERE user_id=$1;
 	`
-	result, err := repo.Conn.Query(query, balance.User.ID)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	defer result.Close()
 
-	result.Next()
-	err = result.Scan(&balance.ID, &balance.Balance, &balance.SpentAllTime)
-	if err != nil {
+	err := repo.Conn.QueryRow(query, userID).Scan(
+		&balance.ID,
+		&balance.User.ID,
+		&balance.Balance,
+		&balance.SpentAllTime,
+	)
+	if err != nil && !errors2.Is(err, sql.ErrNoRows) {
 		log.Error(err)
 		return nil, err
 	}

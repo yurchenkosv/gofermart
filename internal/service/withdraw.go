@@ -1,6 +1,8 @@
 package service
 
 import (
+	"database/sql"
+	errors2 "errors"
 	"github.com/yurchenkosv/gofermart/internal/dao"
 	"github.com/yurchenkosv/gofermart/internal/errors"
 	"github.com/yurchenkosv/gofermart/internal/model"
@@ -37,7 +39,10 @@ func (s WithdrawService) ProcessWithdraw(withdraw model.Withdraw) error {
 		return &errors.OrderFormatError{OrderNumber: withdraw.Order}
 	}
 	b := model.Balance{User: model.User{ID: withdraw.User.ID}}
-	currentBalance, _ := s.repo.GetBalanceByUserID(*b.User.ID)
+	currentBalance, err := s.repo.GetBalanceByUserID(*b.User.ID)
+	if errors2.Is(err, sql.ErrNoRows) {
+		return &errors.LowBalanceError{}
+	}
 
 	expectedAfterWithdraw := currentBalance.Balance - withdraw.Sum
 	if expectedAfterWithdraw < 0 {
@@ -49,7 +54,7 @@ func (s WithdrawService) ProcessWithdraw(withdraw model.Withdraw) error {
 	b.SpentAllTime = currentBalance.SpentAllTime + withdraw.Sum
 
 	//TODO надо делать списание и обновление баланса в одной транзакции
-	err := s.repo.SaveBalance(&b)
+	err = s.repo.SaveBalance(&b)
 	if err != nil {
 		return err
 	}
