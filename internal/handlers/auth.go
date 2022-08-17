@@ -15,9 +15,17 @@ func HandleUserRegistration(writer http.ResponseWriter, request *http.Request) {
 
 	data, err := io.ReadAll(request.Body)
 
-	CheckErrors(err, writer)
+	if err != nil {
+		log.Error(err)
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	err = json.Unmarshal(data, &user)
-	CheckErrors(err, writer)
+	if err != nil {
+		log.Error(err)
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	cfg := GetConfigFromContext(request.Context())
 	auth := service.NewAuthService(cfg.Repo)
 
@@ -27,9 +35,11 @@ func HandleUserRegistration(writer http.ResponseWriter, request *http.Request) {
 		case *errors.UserAlreadyExistsError:
 			log.Error(err)
 			writer.WriteHeader(http.StatusConflict)
+			return
 		default:
 			log.Error("error creating user", e)
-			CheckErrors(e, writer)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}
 	writer = SetToken(writer, request, *updatedUser)
@@ -40,10 +50,18 @@ func HandleUserLogin(writer http.ResponseWriter, request *http.Request) {
 	var user model.User
 
 	data, err := io.ReadAll(request.Body)
-	CheckErrors(err, writer)
+	if err != nil {
+		log.Error(err)
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	err = json.Unmarshal(data, &user)
-	CheckErrors(err, writer)
+	if err != nil {
+		log.Error(err)
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	cfg := GetConfigFromContext(request.Context())
 	auth := service.NewAuthService(cfg.Repo)
@@ -55,9 +73,11 @@ func HandleUserLogin(writer http.ResponseWriter, request *http.Request) {
 		case *errors.InvalidUserError:
 			log.Error(err)
 			writer.WriteHeader(http.StatusUnauthorized)
+			return
 		default:
 			log.Error("error during user authentication ", e)
-			CheckErrors(e, writer)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}
 	writer = SetToken(writer, request, *updatedUser)

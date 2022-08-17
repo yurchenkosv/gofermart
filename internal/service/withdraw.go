@@ -21,7 +21,7 @@ func NewWithdrawService(repo dao.Repository) Withdraw {
 }
 
 func (s WithdrawService) GetWithdrawalsForCurrentUser(withdraw model.Withdraw) ([]*model.Withdraw, error) {
-	withdrawals, err := s.repo.GetWithdrawals(withdraw)
+	withdrawals, err := s.repo.GetWithdrawalsByUserID(*withdraw.User.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func (s WithdrawService) ProcessWithdraw(withdraw model.Withdraw) error {
 		return &errors.OrderFormatError{OrderNumber: withdraw.Order}
 	}
 	b := model.Balance{User: model.User{ID: withdraw.User.ID}}
-	currentBalance, _ := s.repo.GetBalance(b)
+	currentBalance, _ := s.repo.GetBalanceByUserID(*b.User.ID)
 
 	expectedAfterWithdraw := currentBalance.Balance - withdraw.Sum
 	if expectedAfterWithdraw < 0 {
@@ -49,11 +49,11 @@ func (s WithdrawService) ProcessWithdraw(withdraw model.Withdraw) error {
 	b.SpentAllTime = currentBalance.SpentAllTime + withdraw.Sum
 
 	//TODO надо делать списание и обновление баланса в одной транзакции
-	err := s.repo.Save(&b)
+	err := s.repo.SaveBalance(&b)
 	if err != nil {
 		return err
 	}
-	err = s.repo.Save(&withdraw)
+	err = s.repo.SaveWithdraw(&withdraw)
 	if err != nil {
 		return err
 	}

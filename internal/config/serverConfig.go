@@ -12,6 +12,7 @@ type ServerConfig struct {
 	RunAddress           string `env:"RUN_ADDRESS" envDefault:"0.0.0.0:8080"`
 	DatabaseURI          string `env:"DATABASE_URI"`
 	AccrualSystemAddress string `env:"ACCRUAL_SYSTEM_ADDRESS"`
+	InitialTokenSecret   string `env:"TOKEN_SECRET" envDefault:"secret"`
 	TokenAuth            *jwtauth.JWTAuth
 	Repo                 *dao.PostgresRepository
 }

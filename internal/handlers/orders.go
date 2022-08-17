@@ -19,7 +19,11 @@ func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
 	now := time.Now()
 
 	body, err := io.ReadAll(request.Body)
-	CheckErrors(err, writer)
+	if err != nil {
+		log.Error(err)
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	orderNum := strings.TrimSpace(string(body))
 	order.Number = orderNum
@@ -38,15 +42,19 @@ func HandleCreateOrder(writer http.ResponseWriter, request *http.Request) {
 		case *errors.OrderAlreadyAcceptedDifferentUserError:
 			log.Error(err)
 			writer.WriteHeader(http.StatusConflict)
+			return
 		case *errors.OrderAlreadyAcceptedCurrentUserError:
 			log.Error(err)
 			writer.WriteHeader(http.StatusOK)
+			return
 		case *errors.OrderFormatError:
 			log.Error(err)
 			writer.WriteHeader(http.StatusUnprocessableEntity)
+			return
 		default:
 			log.Error("error creating order", err)
-			CheckErrors(err, writer)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}
 	writer.WriteHeader(http.StatusAccepted)
@@ -69,9 +77,11 @@ func HandleGetOrders(writer http.ResponseWriter, request *http.Request) {
 		case *errors.NoOrdersError:
 			log.Error(err)
 			writer.WriteHeader(http.StatusNoContent)
+			return
 		default:
 			log.Error("error getting order ", err)
-			CheckErrors(err, writer)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}
 	result, err := json.Marshal(orders)

@@ -18,5 +18,5 @@ func NewBalance(repo dao.Repository) Balance {
 }
 
 func (b BalanceService) GetCurrentUserBalance(balance model.Balance) (*model.Balance, error) {
-	return b.repo.GetBalance(balance)
+	return b.repo.GetBalanceByUserID(*balance.User.ID)
 }

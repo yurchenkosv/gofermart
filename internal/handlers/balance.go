@@ -21,9 +21,14 @@ func HandleGetBalance(writer http.ResponseWriter, request *http.Request) {
 
 	if err != nil {
 		log.Error("error getting balance", err)
-		CheckErrors(err, writer)
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	body, _ := json.Marshal(balance)
+	body, err := json.Marshal(balance)
+	if err != nil {
+		log.Error("error marshalling to json", err)
+		writer.WriteHeader(http.StatusInternalServerError)
+	}
 	writer.Header().Add("Content-Type", "application/json")
 	writer.Write(body)
 }
@@ -48,12 +53,15 @@ func HandleBalanceWithdraw(writer http.ResponseWriter, request *http.Request) {
 		case *errors.LowBalanceError:
 			log.Error(err)
 			writer.WriteHeader(http.StatusPaymentRequired)
+			return
 		case *errors.OrderFormatError:
 			log.Error(err)
 			writer.WriteHeader(http.StatusUnprocessableEntity)
+			return
 		default:
 			log.Error("error process withdraw", err)
-			CheckErrors(err, writer)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}
 }
@@ -72,11 +80,17 @@ func HandleGetBalanceWithdraws(writer http.ResponseWriter, request *http.Request
 			writer.WriteHeader(http.StatusNoContent)
 		default:
 			log.Error("error getting withdrawals", err)
-			CheckErrors(err, writer)
+			writer.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}
 
-	body, _ := json.Marshal(withdrawals)
+	body, err := json.Marshal(withdrawals)
+	if err != nil {
+		log.Error("error marshalling to json", err)
+		writer.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	writer.Header().Add("Content-Type", "application/json")
 	writer.Write(body)
 }

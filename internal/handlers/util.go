@@ -10,13 +10,6 @@ import (
 	"time"
 )
 
-func CheckErrors(err error, writer http.ResponseWriter) {
-	if err != nil {
-		log.Error("error processing request: ", err)
-		writer.WriteHeader(http.StatusInternalServerError)
-	}
-}
-
 func GetConfigFromContext(ctx context.Context) config.ServerConfig {
 	cfg := ctx.Value(model.ConfigKey("config")).(*config.ServerConfig)
 	return *cfg

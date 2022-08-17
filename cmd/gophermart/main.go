@@ -28,22 +28,17 @@ func init() {
 }
 
 func main() {
-	token, err := generateRandomToken()
-	if err != nil {
-		log.Fatal(err)
-	}
-	err = cfg.Parse()
+	err := cfg.Parse()
 	if err != nil {
 		log.Error(err)
 	}
-	tokenAuth = jwtauth.New("HS256", token, nil)
+	tokenAuth = jwtauth.New("HS256", []byte(cfg.InitialTokenSecret), nil)
 	cfg.TokenAuth = tokenAuth
 	cfg.Repo = dao.NewPGRepo(cfg.DatabaseURI)
+	cfg.Repo.Migrate("file://db/migrations")
 
 	osSignal := make(chan os.Signal, 1)
 	signal.Notify(osSignal, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
-
-	Migrate(cfg)
 
 	sched := gocron.NewScheduler(time.UTC)
 	_, err = sched.EveryRandom(2, 7).
@@ -63,6 +58,7 @@ func main() {
 	go func() {
 		<-osSignal
 		sched.Stop()
+		cfg.Repo.Shutdown()
 		os.Exit(0)
 	}()
 

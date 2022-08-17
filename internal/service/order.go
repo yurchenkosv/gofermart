@@ -54,7 +54,7 @@ func (s OrderService) CreateOrder(order *model.Order) error {
 			OrderNumber: order.Number,
 		}
 	}
-	err = s.repo.Save(order)
+	err = s.repo.SaveOrder(order)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func (s OrderService) CreateOrder(order *model.Order) error {
 }
 
 func (s OrderService) GetUploadedOrdersForUser(order *model.Order) ([]model.Order, error) {
-	orders, err := s.repo.GetOrdersForUser(*order)
+	orders, err := s.repo.GetOrdersByUserID(*order.User.ID)
 	log.Info("found orders for current user: ", orders)
 	if err != nil {
 		return nil, err
@@ -89,23 +89,19 @@ func (s OrderService) UpdateOrderStatus(order model.Order) error {
 	orderInDB.Accrual = order.Accrual
 	orderInDB.Status = order.Status
 
-	err = s.repo.Save(orderInDB)
+	err = s.repo.SaveOrder(orderInDB)
 	if err != nil {
 		return err
 	}
 
 	if order.Accrual != nil {
-		balance, err := s.repo.GetBalance(model.Balance{
-			User: model.User{
-				ID: orderInDB.User.ID,
-			},
-		})
+		balance, err := s.repo.GetBalanceByUserID(*orderInDB.User.ID)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
 		balance.Balance += *orderInDB.Accrual
-		err = s.repo.Save(balance)
+		err = s.repo.SaveBalance(balance)
 		if err != nil {
 			return err
 		}

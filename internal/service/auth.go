@@ -28,7 +28,7 @@ func (auth AuthService) RegisterUser(user *model.User) (*model.User, error) {
 		return nil, &err
 	}
 	user.Password = hashPW(user.Password)
-	err := auth.repo.Save(user)
+	err := auth.repo.SaveUser(user)
 	if err != nil {
 		return nil, err
 	}
