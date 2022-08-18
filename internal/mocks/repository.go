@@ -5,9 +5,11 @@
 package mock_dao
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	dao "github.com/yurchenkosv/gofermart/internal/dao"
 	model "github.com/yurchenkosv/gofermart/internal/model"
 )
 
@@ -32,6 +34,20 @@ func NewMockRepository(ctrl *gomock.Controller) *MockRepository {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 	return m.recorder
+}
+
+// Atomic mocks base method.
+func (m *MockRepository) Atomic(ctx context.Context, fn func(dao.Repository) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Atomic", ctx, fn)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Atomic indicates an expected call of Atomic.
+func (mr *MockRepositoryMockRecorder) Atomic(ctx, fn interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Atomic", reflect.TypeOf((*MockRepository)(nil).Atomic), ctx, fn)
 }
 
 // GetBalanceByUserID mocks base method.
