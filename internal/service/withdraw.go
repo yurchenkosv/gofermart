@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"database/sql"
 	errors2 "errors"
 	"github.com/yurchenkosv/gofermart/internal/dao"
@@ -52,13 +53,18 @@ func (s WithdrawService) ProcessWithdraw(withdraw model.Withdraw) error {
 	}
 	b.Balance = expectedAfterWithdraw
 	b.SpentAllTime = currentBalance.SpentAllTime + withdraw.Sum
-
-	//TODO надо делать списание и обновление баланса в одной транзакции
-	err = s.repo.SaveBalance(&b)
-	if err != nil {
-		return err
-	}
-	err = s.repo.SaveWithdraw(&withdraw)
+	ctx := context.Background()
+	err = s.repo.Atomic(ctx, func(r dao.Repository) error {
+		err = s.repo.SaveBalance(&b)
+		if err != nil {
+			return err
+		}
+		err = s.repo.SaveWithdraw(&withdraw)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		return err
 	}

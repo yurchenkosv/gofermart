@@ -1,8 +1,10 @@
 package dao
 
 import (
+	"context"
 	"database/sql"
 	errors2 "errors"
+	"fmt"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -12,9 +14,17 @@ import (
 	"github.com/yurchenkosv/gofermart/internal/model"
 )
 
+type QueryAble interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Prepare(query string) (*sql.Stmt, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+}
+
 type PostgresRepository struct {
 	Conn  *sqlx.DB
 	DBURI string
+	db    QueryAble
 }
 
 func NewPGRepo(dbURI string) *PostgresRepository {
@@ -24,10 +34,43 @@ func NewPGRepo(dbURI string) *PostgresRepository {
 	}
 	conn.SetMaxOpenConns(100)
 	conn.SetMaxIdleConns(5)
+
 	return &PostgresRepository{
 		Conn:  conn,
 		DBURI: dbURI,
+		db:    conn,
 	}
+}
+
+func (repo *PostgresRepository) Atomic(
+	ctx context.Context,
+	fn func(r Repository) error,
+) (err error) {
+	tx, err := repo.Conn.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			_ = tx.Rollback()
+			panic(p)
+		}
+		if err != nil {
+			if rbErr := tx.Rollback(); rbErr != nil {
+				err = fmt.Errorf("tx err: %v, rb err: %v", err, rbErr)
+			}
+		} else {
+			err = tx.Commit()
+		}
+	}()
+
+	newRepo := &PostgresRepository{
+		Conn: repo.Conn,
+		db:   tx,
+	}
+	err = fn(newRepo)
+	return
 }
 
 func (repo PostgresRepository) Shutdown() {
@@ -49,7 +92,7 @@ func (repo *PostgresRepository) Migrate(path string) {
 }
 
 func (repo *PostgresRepository) GetWithdrawalsByUserID(userID int) ([]*model.Withdraw, error) {
-	var withrawals []*model.Withdraw
+	var withdrawals []*model.Withdraw
 	query := `
 		SELECT order_num, 
 		       sum, 
@@ -57,7 +100,7 @@ func (repo *PostgresRepository) GetWithdrawalsByUserID(userID int) ([]*model.Wit
 		FROM withdrawals 
 		WHERE user_id=$1;
 	`
-	rows, err := repo.Conn.Queryx(query, userID)
+	rows, err := repo.db.Query(query, userID)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -79,9 +122,9 @@ func (repo *PostgresRepository) GetWithdrawalsByUserID(userID int) ([]*model.Wit
 			log.Error(err)
 			continue
 		}
-		withrawals = append(withrawals, &withdraw)
+		withdrawals = append(withdrawals, &withdraw)
 	}
-	return withrawals, nil
+	return withdrawals, nil
 }
 
 func (repo *PostgresRepository) GetBalanceByUserID(userID int) (*model.Balance, error) {
@@ -95,7 +138,7 @@ func (repo *PostgresRepository) GetBalanceByUserID(userID int) (*model.Balance, 
 		WHERE user_id=$1;
 	`
 
-	err := repo.Conn.QueryRow(query, userID).Scan(
+	err := repo.db.QueryRow(query, userID).Scan(
 		&balance.ID,
 		&balance.Balance,
 		&balance.SpentAllTime,
@@ -115,7 +158,7 @@ func (repo *PostgresRepository) GetOrdersByUserID(userID int) ([]model.Order, er
 		FROM orders
 		WHERE user_id=$1;
 	`
-	result, err := repo.Conn.Query(query, userID)
+	result, err := repo.db.Query(query, userID)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -157,7 +200,7 @@ func (repo *PostgresRepository) GetOrdersForStatusUpdate() ([]*model.Order, erro
 		WHERE status in ('NEW',
 		                'PROCESSING');
 	`
-	result, err := repo.Conn.Query(query)
+	result, err := repo.db.Query(query)
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -204,7 +247,7 @@ func (repo *PostgresRepository) GetOrderByNumber(orderNumber string) (*model.Ord
 		FROM orders 
 		WHERE number=$1;
 	`
-	err := repo.Conn.QueryRow(query, orderNumber).
+	err := repo.db.QueryRow(query, orderNumber).
 		Scan(
 			&order.ID,
 			&order.Number,
@@ -227,7 +270,7 @@ func (repo *PostgresRepository) GetUser(user *model.User) (*model.User, error) {
 	query := `
 		SELECT id FROM users WHERE username=$1 and password=$2;
 	`
-	err := repo.Conn.
+	err := repo.db.
 		QueryRow(query, user.Login, user.Password).
 		Scan(&userID)
 	if err != nil && !errors2.Is(err, sql.ErrNoRows) {
@@ -249,7 +292,7 @@ func (repo *PostgresRepository) SaveWithdraw(withdraw *model.Withdraw) error {
 		                   )
 		VALUES ($1, $2, $3, $4);
 	`
-	_, err := repo.Conn.Exec(query,
+	_, err := repo.db.Exec(query,
 		withdraw.Order,
 		withdraw.Sum,
 		withdraw.ProcessedAt,
@@ -274,7 +317,7 @@ func (repo *PostgresRepository) SaveBalance(balance *model.Balance) error {
 		    SET balance=$2, 
 		        spent_all_time=$3 ;
 	`
-	_, err := repo.Conn.Exec(query,
+	_, err := repo.db.Exec(query,
 		balance.User.ID,
 		balance.Balance,
 		balance.SpentAllTime,
@@ -302,7 +345,7 @@ func (repo *PostgresRepository) SaveOrder(order *model.Order) error {
 		            	upload_time=$4,
 		            	accrual=$5;
 	`
-	_, err := repo.Conn.Exec(query,
+	_, err := repo.db.Exec(query,
 		order.User.ID,
 		order.Number,
 		order.Status,
@@ -324,7 +367,7 @@ func (repo *PostgresRepository) SaveUser(user *model.User) error {
 		)
 		VALUES($1, $2);
 	`
-	_, err := repo.Conn.Exec(query, user.Login, user.Password)
+	_, err := repo.db.Exec(query, user.Login, user.Password)
 	if err != nil {
 		log.Error(err)
 		return err

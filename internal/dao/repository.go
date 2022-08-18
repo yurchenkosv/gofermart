@@ -1,6 +1,9 @@
 package dao
 
-import "github.com/yurchenkosv/gofermart/internal/model"
+import (
+	"context"
+	"github.com/yurchenkosv/gofermart/internal/model"
+)
 
 type Repository interface {
 	GetUser(user *model.User) (*model.User, error)
@@ -13,5 +16,6 @@ type Repository interface {
 	SaveBalance(balance *model.Balance) error
 	SaveOrder(order *model.Order) error
 	SaveUser(user *model.User) error
+	Atomic(ctx context.Context, fn func(r Repository) error) (err error)
 	Shutdown()
 }

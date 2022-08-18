@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	log "github.com/sirupsen/logrus"
 	"github.com/yurchenkosv/gofermart/internal/dao"
 	"github.com/yurchenkosv/gofermart/internal/errors"
@@ -77,37 +78,43 @@ func (s OrderService) GetUploadedOrdersForUser(UserID int) ([]model.Order, error
 }
 
 func (s OrderService) UpdateOrderStatus(order model.Order) error {
-	mux.Lock()
-	defer mux.Unlock()
-	orderInDB, err := s.repo.GetOrderByNumber(order.Number)
-	if err != nil {
-		return err
-	}
-	if orderInDB.ID == nil {
-		return &errors.NoOrdersError{}
-	}
-	if orderInDB.Status == order.Status {
-		return &errors.OrderNoChangeError{}
-	}
-	orderInDB.Accrual = order.Accrual
-	orderInDB.Status = order.Status
-
-	err = s.repo.SaveOrder(orderInDB)
-	if err != nil {
-		return err
-	}
-
-	if order.Accrual != nil {
-		balance, err := s.repo.GetBalanceByUserID(*orderInDB.User.ID)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		balance.Balance += *orderInDB.Accrual
-		err = s.repo.SaveBalance(balance)
+	ctx := context.Background()
+	err := s.repo.Atomic(ctx, func(r dao.Repository) error {
+		orderInDB, err := s.repo.GetOrderByNumber(order.Number)
 		if err != nil {
 			return err
 		}
+		if orderInDB.ID == nil {
+			return &errors.NoOrdersError{}
+		}
+		if orderInDB.Status == order.Status {
+			return &errors.OrderNoChangeError{}
+		}
+		orderInDB.Accrual = order.Accrual
+		orderInDB.Status = order.Status
+
+		err = s.repo.SaveOrder(orderInDB)
+		if err != nil {
+			return err
+		}
+
+		if order.Accrual != nil {
+			balance, err := s.repo.GetBalanceByUserID(*orderInDB.User.ID)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			balance.Balance += *orderInDB.Accrual
+			err = s.repo.SaveBalance(balance)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
 	}
 	return nil
 }
